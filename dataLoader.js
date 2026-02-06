@@ -74,8 +74,9 @@ async function loadFromGoogleSheets() {
  * Uses gviz/tq API endpoint - works on GitHub Pages without CORS proxy
  */
 async function fetchGoogleSheet(sheetName, gid) {
-    // Use gviz/tq endpoint with gid parameter
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    // Use gviz/tq endpoint with gid parameter and cache-busting
+    const timestamp = Date.now();
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&_t=${timestamp}`;
     
     try {
         console.log(`📥 Fetching ${sheetName} (gid=${gid}) from Google Sheets...`);
@@ -85,15 +86,24 @@ async function fetchGoogleSheet(sheetName, gid) {
         let response;
         let usedProxy = false;
         
+        const fetchOptions = {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        };
+        
         try {
             // Try proxy first for local development
             console.log(`   🔄 Trying proxy first for local testing...`);
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
-            response = await fetch(proxyUrl);
+            response = await fetch(proxyUrl, fetchOptions);
             usedProxy = true;
         } catch (proxyError) {
             console.log(`   ⚠️ Proxy failed, trying direct fetch...`);
-            response = await fetch(csvUrl);
+            response = await fetch(csvUrl, fetchOptions);
             usedProxy = false;
         }
         
@@ -181,32 +191,38 @@ function normalizeSprintConfig(rawData) {
     rawData.forEach((row, index) => {
         console.log(`   Row ${index}:`, row);
         
-        // Handle standard key-value columns
-        let key = (row.key || row.Key || row.KEY || '').trim();
-        let value = (row.value || row.Value || row.VALUE || '').trim();
+        // Get all keys from the row
+        const keys = Object.keys(row);
         
-        // Handle special case where key column contains the key name
-        if (!key) {
-            // Check if any property starts with "key "
-            const keyProp = Object.keys(row).find(k => k.toLowerCase().startsWith('key'));
-            if (keyProp) {
-                key = keyProp.replace(/^key\s+/i, '').trim();
-                value = row[keyProp];
-                console.log(`   📝 Found key property "${keyProp}" -> key="${key}", value="${value}"`);
+        if (keys.length >= 2) {
+            let key = keys[0]; // First column
+            let value = row[keys[0]]; // First column value
+            
+            // Handle special case where first column starts with "key "
+            if (key.toLowerCase().startsWith('key ')) {
+                key = key.replace(/^key\s+/i, '').trim();
+                // For key rows, the value is in the second column and may start with "value "
+                const valueCol = keys[1];
+                value = row[valueCol] || '';
+                if (value.toLowerCase().startsWith('value ')) {
+                    value = value.replace(/^value\s+/i, '').trim();
+                }
+                console.log(`   📝 Key row: "${keys[0]}" -> key="${key}", value="${value}"`);
+            } else {
+                // Standard key-value row where first column is key, second is value
+                const valueCol = keys[1];
+                value = row[valueCol] || '';
+                console.log(`   📝 Standard row: key="${key}", value="${value}"`);
             }
-        }
-        
-        // Handle special case where value column contains the value with prefix
-        if (value && value.toLowerCase().startsWith('value ')) {
-            value = value.replace(/^value\s+/i, '').trim();
-            console.log(`   📝 Stripped "value " prefix: "${value}"`);
-        }
-        
-        if (key && value) {
-            config[key] = value;
-            console.log(`   ✅ Added config[${key}] = "${value}"`);
+            
+            if (key && value) {
+                config[key] = value;
+                console.log(`   ✅ Added config[${key}] = "${value}"`);
+            } else {
+                console.log(`   ⚠️ Skipping row - key="${key}", value="${value}"`);
+            }
         } else {
-            console.log(`   ⚠️ Skipping row - key="${key}", value="${value}"`);
+            console.log(`   ⚠️ Skipping row - not enough columns`);
         }
     });
     
@@ -675,4 +691,8 @@ if (typeof window !== 'undefined') {
             hideLoadingIndicator();
         }, 300);
     });
+    
+    // Expose functions globally for HTML button access
+    window.refreshData = refreshData;
+    window.exportData = exportData;
 }
