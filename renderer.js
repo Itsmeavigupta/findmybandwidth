@@ -461,24 +461,30 @@ function addToolbar() {
     ).join('');
     
     content.insertAdjacentHTML('afterbegin', `
-        <div id="toolbar" style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <button onclick="refreshData()" style="padding:6px 12px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.8rem;">🔄 Refresh Data</button>
-            <button onclick="exportData()" style="padding:6px 12px;background:#4361ee;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.8rem;">📥 Export JSON</button>
-            <input type="text" placeholder="Search tasks..." onkeyup="filterSearch(this.value)" style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.8rem;flex:1;min-width:200px;">
-            <select onchange="filterOwner(this.value)" style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.8rem;">
-                <option value="all">All Owners</option>
-                ${ownerOptions}
-                <option value="both">Both</option>
-            </select>
-            <select onchange="filterPriority(this.value)" style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.8rem;">
-                <option value="all">All Priorities</option>
-                <option value="urgent">Urgent</option>
-                <option value="normal">Normal</option>
-                <option value="pending">Pending</option>
-            </select>
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;">
-                <input type="checkbox" onchange="filterCompleted(this.checked)"> Hide Completed
-            </label>
+        <div id="toolbar">
+            <div class="toolbar-group toolbar-actions">
+                <button onclick="window.print()" class="btn btn-print">🖨️ Print</button>
+                <button onclick="refreshData()" class="btn btn-refresh">🔄 Refresh</button>
+                <button onclick="exportData()" class="btn btn-export">📥 Export</button>
+            </div>
+            <input type="text" placeholder="🔍 Search tasks..." onkeyup="filterSearch(this.value)" class="toolbar-search">
+            <div class="toolbar-group toolbar-filters">
+                <select onchange="filterOwner(this.value)" class="toolbar-select">
+                    <option value="all">👥 All Owners</option>
+                    ${ownerOptions}
+                    <option value="both">Both</option>
+                </select>
+                <select onchange="filterPriority(this.value)" class="toolbar-select">
+                    <option value="all">⚡ All Priorities</option>
+                    <option value="urgent">🔴 Urgent</option>
+                    <option value="normal">🟢 Normal</option>
+                    <option value="pending">⏳ Pending</option>
+                </select>
+                <label class="toolbar-checkbox">
+                    <input type="checkbox" onchange="filterCompleted(this.checked)">
+                    <span>Hide Completed</span>
+                </label>
+            </div>
         </div>
     `);
 }
