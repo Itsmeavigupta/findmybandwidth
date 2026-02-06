@@ -169,10 +169,17 @@ function normalizeSprintConfig(rawData) {
         if (key) config[key] = value;
     });
     
+    console.log('📋 Sprint Config parsed:', config);
+    
+    // Calculate default date range (current month if not specified)
+    const today = new Date();
+    const defaultStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const defaultEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    
     return {
         name: config.sprint_name || 'Untitled Sprint',
-        startDate: config.start_date || new Date().toISOString().split('T')[0],
-        endDate: config.end_date || new Date().toISOString().split('T')[0],
+        startDate: config.start_date || defaultStart,
+        endDate: config.end_date || defaultEnd,
         preparedBy: config.prepared_by || 'Unknown'
     };
 }
@@ -315,12 +322,19 @@ function validateData() {
 function loadFallbackData() {
     console.warn('⚠️ Using fallback demo data. Configure your Google Sheet!');
     
+    // Use current month as default range
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
     appData.project = {
         name: "Demo Sprint (Setup Required)",
-        startDate: "2026-02-06",
-        endDate: "2026-02-20",
+        startDate: startOfMonth.toISOString().split('T')[0],
+        endDate: endOfMonth.toISOString().split('T')[0],
         preparedBy: "System"
     };
+    
+    console.log('📅 Date range:', appData.project.startDate, 'to', appData.project.endDate);
     
     appData.teamMembers = [
         {
@@ -335,6 +349,14 @@ function loadFallbackData() {
         }
     ];
     
+    // Generate demo tasks with dates spread across the month
+    const monthStart = new Date(appData.project.startDate);
+    const getDemoDate = (dayOffset) => {
+        const date = new Date(monthStart);
+        date.setDate(date.getDate() + dayOffset);
+        return date.toISOString().split('T')[0];
+    };
+    
     appData.tasks = [
         {
             id: "setup-1",
@@ -345,8 +367,8 @@ function loadFallbackData() {
             bu: "Setup",
             status: "Pending",
             priority: "urgent",
-            startDate: "2026-02-06",
-            endDate: "2026-02-06",
+            startDate: getDemoDate(0),
+            endDate: getDemoDate(2),
             type: "Configuration",
             blockers: "",
             notes: "Create tabs: SPRINT_CONFIG, MEMBERS, TASKS, MILESTONES",
@@ -361,8 +383,8 @@ function loadFallbackData() {
             bu: "Setup",
             status: "Pending",
             priority: "urgent",
-            startDate: "2026-02-06",
-            endDate: "2026-02-06",
+            startDate: getDemoDate(3),
+            endDate: getDemoDate(5),
             type: "Configuration",
             blockers: "",
             notes: "Share → Anyone with link can VIEW",
@@ -377,11 +399,43 @@ function loadFallbackData() {
             bu: "Setup",
             status: "Pending",
             priority: "urgent",
-            startDate: "2026-02-06",
-            endDate: "2026-02-06",
+            startDate: getDemoDate(6),
+            endDate: getDemoDate(10),
             type: "Configuration",
             blockers: "",
             notes: "Copy Sheet ID from URL and paste in config",
+            completed: false
+        },
+        {
+            id: "demo-4",
+            name: "Example Task - Development Phase",
+            jiraId: "DEMO-101",
+            jiraUrl: "#",
+            owner: "neha",
+            bu: "Development",
+            status: "In Progress",
+            priority: "normal",
+            startDate: getDemoDate(7),
+            endDate: getDemoDate(14),
+            type: "Development",
+            blockers: "",
+            notes: "Sample multi-day task spanning 2 weeks",
+            completed: false
+        },
+        {
+            id: "demo-5",
+            name: "Example Task - Review & Testing",
+            jiraId: "DEMO-102",
+            jiraUrl: "#",
+            owner: "both",
+            bu: "QA",
+            status: "Pending",
+            priority: "normal",
+            startDate: getDemoDate(15),
+            endDate: getDemoDate(20),
+            type: "Testing",
+            blockers: "",
+            notes: "Cross-team collaboration task",
             completed: false
         }
     ];
@@ -389,9 +443,33 @@ function loadFallbackData() {
     appData.milestones = [
         {
             id: "setup-m1",
-            date: "2026-02-06",
-            title: "Google Sheets Setup Complete",
+            date: getDemoDate(0),
+            title: "Sprint Kickoff",
             assignee: "Team"
+        },
+        {
+            id: "demo-m2",
+            date: getDemoDate(7),
+            title: "Mid-Sprint Review",
+            assignee: "PM"
+        },
+        {
+            id: "demo-m3",
+            date: getDemoDate(14),
+            title: "Development Complete",
+            assignee: "Dev Team"
+        },
+        {
+            id: "demo-m4",
+            date: getDemoDate(20),
+            title: "QA Sign-off",
+            assignee: "QA Team"
+        },
+        {
+            id: "demo-m5",
+            date: endOfMonth.toISOString().split('T')[0],
+            title: "Sprint End & Demo",
+            assignee: "All"
         }
     ];
     
