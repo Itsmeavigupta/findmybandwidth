@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Roadmap | Task Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 Sprint Roadmap & Bandwidth Report</h1>
+            <p>Task allocation and timeline overview</p>
+            <div class="meta-info">
+                <div class="meta-item" id="sprint-dates">📅 Loading...</div>
+                <div class="meta-item" id="prepared-by">👤 Prepared by: Loading...</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Team Overview Section -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-icon icon-team">👥</div>
+                    <h2>Team Overview</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Role</th>
+                            <th>Capacity</th>
+                            <th>Focus</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bandwidth Overview Section -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">📊</div>
+                    <h2>Overall Bandwidth Overview</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Bandwidth Description</th>
+                            <th>Effective Bandwidth</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Task sections will be dynamically generated -->
+
+            <!-- Gantt Chart Section -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-icon icon-gantt">📈</div>
+                    <h2>Sprint Timeline (Gantt Chart)</h2>
+                </div>
+                <div class="gantt-container">
+                    <table class="gantt-table">
+                        <thead>
+                            <!-- Dynamic gantt headers -->
+                        </thead>
+                        <tbody>
+                            <!-- Dynamic gantt rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Milestones Section -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-icon icon-milestone">🎯</div>
+                    <h2>Key Milestones</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Milestone</th>
+                            <th>Owner/Assignee</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Button -->
+    <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+    
+    <!-- Refresh Button -->
+    <button class="print-btn" onclick="refreshData()" style="right:100px;background:#10b981;">
+        🔄 Refresh
+    </button>
+    
+    <!-- Export Button -->
+    <button class="print-btn" onclick="exportData()" style="right:200px;background:#8b5cf6;">
+        💾 Export JSON
+    </button>
+
+    <!-- Scripts -->
+    <script src="dataLoader.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
