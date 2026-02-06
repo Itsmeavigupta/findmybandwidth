@@ -163,10 +163,41 @@ function parseCSVLine(line) {
  */
 function normalizeSprintConfig(rawData) {
     const config = {};
+    
     rawData.forEach(row => {
-        const key = (row.key || row.Key || row.KEY || '').trim();
-        const value = (row.value || row.Value || row.VALUE || '').trim();
-        if (key) config[key] = value;
+        // Handle various column name formats
+        const key = (row.key || row.Key || row.KEY || row['key sprint_name'] || '').trim();
+        const value = (row.value || row.Value || row.VALUE || row['value Demo Sprint - Jan-Feb 2026'] || '').trim();
+        
+        // If key is empty but we have other columns, try to use first column as key, second as value
+        if (!key && Object.keys(row).length >= 2) {
+            const keys = Object.keys(row);
+            const firstCol = keys[0];
+            const secondCol = keys[1];
+            if (row[firstCol] && row[secondCol]) {
+                config[row[firstCol].trim()] = row[secondCol].trim();
+                return;
+            }
+        }
+        
+        if (key) {
+            // Clean up the key and value
+            const cleanKey = key.replace(/^key\s+/i, '').trim();
+            const cleanValue = value.replace(/^value\s+/i, '').trim();
+            
+            // Handle special cases
+            if (cleanKey === 'sprint_name' || cleanKey.includes('sprint_name')) {
+                config['sprint_name'] = cleanValue;
+            } else if (cleanKey === 'start_date' || cleanKey.includes('start_date')) {
+                config['start_date'] = cleanValue;
+            } else if (cleanKey === 'end_date' || cleanKey.includes('end_date')) {
+                config['end_date'] = cleanValue;
+            } else if (cleanKey === 'prepared_by' || cleanKey.includes('prepared_by')) {
+                config['prepared_by'] = cleanValue;
+            } else {
+                config[cleanKey] = cleanValue;
+            }
+        }
     });
     
     console.log('📋 Sprint Config parsed:', config);
@@ -177,10 +208,10 @@ function normalizeSprintConfig(rawData) {
     const defaultEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
     
     return {
-        name: config.sprint_name || 'Untitled Sprint',
+        name: config.sprint_name || config.name || 'Untitled Sprint',
         startDate: config.start_date || defaultStart,
         endDate: config.end_date || defaultEnd,
-        preparedBy: config.prepared_by || 'Unknown'
+        preparedBy: config.prepared_by || config.preparedBy || 'Unknown'
     };
 }
 
