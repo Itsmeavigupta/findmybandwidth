@@ -118,53 +118,55 @@ async function loadFromGoogleSheets() {
  * Uses gviz/tq API endpoint - works on GitHub Pages without CORS proxy
  */
 async function fetchGoogleSheet(sheetName, gid) {
-    // Use gviz/tq endpoint with gid parameter and cache-busting
-    const timestamp = Date.now();
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&_t=${timestamp}`;
+    // Use gviz/tq endpoint with gid parameter — no auth needed for public sheets
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
     
     try {
-        console.log(`📥 Fetching ${sheetName} (gid=${gid}) from Google Sheets...`);
-        console.log(`   URL: ${csvUrl}`);
+        console.log(`📥 Fetching ${sheetName}...`);
         
-        // For local testing, try proxy first to avoid CORS issues
         let response;
-        let usedProxy = false;
+        let fetchMethod = 'direct';
         
-        const fetchOptions = {
-            method: 'GET',
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-            }
-        };
-        
+        // Strategy: Try direct fetch first (works from GitHub Pages & most hosted origins).
+        // Only fall back to CORS proxies when direct fails (e.g. localhost development).
         try {
-            // Try proxy first for local development
-            console.log(`   🔄 Trying proxy first for local testing...`);
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
-            response = await fetch(proxyUrl, fetchOptions);
-            usedProxy = true;
-        } catch (proxyError) {
-            console.log(`   ⚠️ Proxy failed, trying direct fetch...`);
-            response = await fetch(csvUrl, fetchOptions);
-            usedProxy = false;
-        }
-        
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ${sheetName}: ${response.status}. Make sure sheet is shared publicly (Anyone with link can view). URL: ${csvUrl}`);
+            response = await fetch(csvUrl, { method: 'GET', cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            fetchMethod = 'direct';
+        } catch (directError) {
+            console.log(`   ⚠️ Direct fetch failed (${directError.message}), trying CORS proxies...`);
+            
+            // List of CORS proxy fallbacks — tried in order
+            const proxies = [
+                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url) => `https://cors-anywhere.herokuapp.com/${url}`
+            ];
+            
+            let proxySuccess = false;
+            for (const buildProxyUrl of proxies) {
+                try {
+                    const proxyUrl = buildProxyUrl(csvUrl);
+                    response = await fetch(proxyUrl, { method: 'GET', cache: 'no-store' });
+                    if (response.ok) {
+                        fetchMethod = 'proxy';
+                        proxySuccess = true;
+                        break;
+                    }
+                } catch (_) { /* try next proxy */ }
+            }
+            
+            if (!proxySuccess) {
+                throw new Error(`All fetch methods failed for ${sheetName}. Ensure sheet is shared publicly (Anyone with link → Viewer).`);
+            }
         }
         
         const csvText = await response.text();
-        console.log(`   ✅ Fetched via ${usedProxy ? 'proxy' : 'direct'}: ${csvText.length} chars`);
-        
-        // Log first few lines for debugging
-        const lines = csvText.split('\n').slice(0, 3);
-        console.log(`   📄 Sample data:`, lines);
+        console.log(`   ✅ ${sheetName}: ${csvText.length} chars via ${fetchMethod}`);
         
         const data = parseCSV(csvText);
-        console.log(`   📊 Parsed ${data.length} rows`);
+        console.log(`   📊 ${sheetName}: ${data.length} rows parsed`);
         
-        console.log(`✅ ${sheetName}: ${data.length} rows loaded`);
         return data;
         
     } catch (error) {
@@ -232,40 +234,32 @@ function normalizeSprintConfig(rawData) {
     const config = {};
     
     rawData.forEach((row, index) => {
-        console.log(`   Row ${index}:`, row);
+        // CSV headers are "key" and "value", so each row is {key: "...", value: "..."}
+        const columns = Object.keys(row);
+        if (columns.length < 2) {
+            console.log(`   ⚠️ Row ${index}: skipping — not enough columns`);
+            return;
+        }
         
-        // Get all keys from the row
-        const keys = Object.keys(row);
+        // Read cell values (not header names)
+        let cellKey = (row[columns[0]] || '').trim();
+        let cellValue = (row[columns[1]] || '').trim();
         
-        if (keys.length >= 2) {
-            let key = keys[0]; // First column
-            let value = row[keys[0]]; // First column value
-            
-            // Handle special case where first column starts with "key "
-            if (key.toLowerCase().startsWith('key ')) {
-                key = key.replace(/^key\s+/i, '').trim();
-                // For key rows, the value is in the second column and may start with "value "
-                const valueCol = keys[1];
-                value = row[valueCol] || '';
-                if (value.toLowerCase().startsWith('value ')) {
-                    value = value.replace(/^value\s+/i, '').trim();
-                }
-                console.log(`   📝 Key row: "${keys[0]}" -> key="${key}", value="${value}"`);
-            } else {
-                // Standard key-value row where first column is key, second is value
-                const valueCol = keys[1];
-                value = row[valueCol] || '';
-                console.log(`   📝 Standard row: key="${key}", value="${value}"`);
-            }
-            
-            if (key && value) {
-                config[key] = value;
-                console.log(`   ✅ Added config[${key}] = "${value}"`);
-            } else {
-                console.log(`   ⚠️ Skipping row - key="${key}", value="${value}"`);
-            }
-        } else {
-            console.log(`   ⚠️ Skipping row - not enough columns`);
+        if (!cellKey) return;
+        
+        // Strip "key " prefix from the key cell (e.g. "key sprint_name" → "sprint_name")
+        if (cellKey.toLowerCase().startsWith('key ')) {
+            cellKey = cellKey.replace(/^key\s+/i, '').trim();
+        }
+        
+        // Strip "value " prefix from the value cell (e.g. "value Jan-Feb 2026" → "Jan-Feb 2026")
+        if (cellValue.toLowerCase().startsWith('value ')) {
+            cellValue = cellValue.replace(/^value\s+/i, '').trim();
+        }
+        
+        if (cellKey && cellValue) {
+            config[cellKey] = cellValue;
+            console.log(`   ✅ config[${cellKey}] = "${cellValue}"`);
         }
     });
     
