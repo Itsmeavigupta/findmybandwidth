@@ -658,87 +658,7 @@ tbody tr:last-child td {
     transform: translateY(0);
 }
 
-/* Toolbar Styles */
-#toolbar {
-    background: var(--gray-50);
-    padding: 16px;
-    border-radius: 6px;
-    margin-bottom: 24px;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-    box-shadow: 0 1px 3px var(--shadow);
-    border: 1px solid var(--border);
-}
-
-#toolbar button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 2px var(--shadow);
-}
-
-#toolbar button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px var(--shadow);
-}
-
-#toolbar button:active {
-    transform: translateY(0);
-}
-
-#toolbar input[type="text"] {
-    padding: 8px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.85rem;
-    flex: 1;
-    min-width: 200px;
-    transition: border-color 0.2s;
-}
-
-#toolbar input[type="text"]:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-#toolbar select {
-    padding: 8px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: border-color 0.2s;
-    background: white;
-}
-
-#toolbar select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-#toolbar label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    user-select: none;
-}
-
-#toolbar input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
+/* Toolbar Styles - Consolidated */
 
 /* Mobile Responsiveness */
 @media screen and (max-width: 768px) {
@@ -801,9 +721,18 @@ tbody tr:last-child td {
         font-size: 0.8rem;
     }
 
-    /* Mobile Tables */
+    /* Mobile Tables - Improved scrolling */
     table {
         font-size: 0.75rem;
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    thead, tbody, tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
     }
 
     th, td {
@@ -812,6 +741,10 @@ tbody tr:last-child td {
 
     th {
         font-size: 0.7rem;
+        position: sticky;
+        top: 0;
+        background: var(--gray-100);
+        z-index: 10;
     }
 
     /* Mobile Task Cards */
@@ -838,11 +771,13 @@ tbody tr:last-child td {
         font-size: 0.75rem;
     }
 
-    /* Mobile Gantt Chart */
+    /* Mobile Gantt Chart - Enhanced */
     .gantt-container {
         margin-top: 12px;
         border-radius: 6px;
         font-size: 0.7rem;
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
     }
 
     .gantt-chart {
@@ -856,6 +791,10 @@ tbody tr:last-child td {
     .gantt-header-task {
         padding: 8px 10px;
         font-size: 0.7rem;
+        position: sticky;
+        left: 0;
+        background: var(--gray-200);
+        z-index: 20;
     }
 
     .gantt-header-day {
@@ -870,6 +809,15 @@ tbody tr:last-child td {
     .gantt-task-name {
         padding: 8px 10px;
         font-size: 0.75rem;
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 10;
+    }
+
+    .gantt-row:hover .gantt-task-name {
+        background: #e0f2fe;
+        z-index: 10;
     }
 
     .gantt-task-title {
@@ -894,45 +842,14 @@ tbody tr:last-child td {
         font-size: 0.6rem;
     }
 
-    /* Mobile Toolbar */
-    #toolbar {
-        padding: 12px;
-        gap: 8px;
-        margin-bottom: 16px;
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #toolbar button {
-        padding: 10px 16px;
-        font-size: 0.8rem;
-        width: 100%;
-    }
-
-    #toolbar input[type="text"] {
-        min-width: 100%;
-        font-size: 0.8rem;
-        padding: 10px 12px;
-    }
-
-    #toolbar select {
-        font-size: 0.8rem;
-        padding: 10px 12px;
-        width: 100%;
-    }
-
-    #toolbar label {
-        font-size: 0.8rem;
-        justify-content: center;
-    }
-
-    /* Mobile Buttons */
+    /* Hide fixed print button on mobile */
     .print-btn {
-        bottom: 12px;
-        right: 12px;
-        padding: 10px 16px;
-        font-size: 0.8rem;
-        border-radius: 6px;
+        display: none;
+    }
+    
+    /* Touch-friendly spacing */
+    button, input, select {
+        min-height: 44px;
     }
 }
 

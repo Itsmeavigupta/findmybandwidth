@@ -3,74 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sprint Roadmap and Bandwidth Report - Track team tasks and timelines">
     <title>Sprint Roadmap | Task Tracker</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <!-- Header -->
-        <div class="header">
+        <header class="header" role="banner">
             <h1>📊 Sprint Roadmap & Bandwidth Report</h1>
             <p>Task allocation and timeline overview</p>
-            <div class="meta-info">
-                <div class="meta-item" id="sprint-dates">📅 Loading...</div>
-                <div class="meta-item" id="prepared-by">👤 Prepared by: Loading...</div>
+            <div class="meta-info" role="contentinfo">
+                <div class="meta-item" id="sprint-dates" aria-label="Sprint dates">📅 Loading...</div>
+                <div class="meta-item" id="prepared-by" aria-label="Prepared by">👤 Prepared by: Loading...</div>
             </div>
-        </div>
+        </header>
 
         <!-- Main Content -->
-        <div class="content">
+        <main class="content" role="main">
             <!-- Team Overview Section -->
-            <div class="section">
+            <section class="section" aria-labelledby="team-overview-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-team">👥</div>
-                    <h2>Team Overview</h2>
+                    <div class="section-icon icon-team" aria-hidden="true">👥</div>
+                    <h2 id="team-overview-heading">Team Overview</h2>
                 </div>
-                <table>
+                <table role="table" aria-label="Team members overview">
                     <thead>
                         <tr>
-                            <th>Member</th>
-                            <th>Role</th>
-                            <th>Capacity</th>
-                            <th>Focus</th>
+                            <th scope="col">Member</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Capacity</th>
+                            <th scope="col">Focus</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Dynamic content -->
                     </tbody>
                 </table>
-            </div>
+            </section>
 
             <!-- Bandwidth Overview Section -->
-            <div class="section">
+            <section class="section" aria-labelledby="bandwidth-overview-heading">
                 <div class="section-header">
-                    <div class="section-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">📊</div>
-                    <h2>Overall Bandwidth Overview</h2>
+                    <div class="section-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);" aria-hidden="true">📊</div>
+                    <h2 id="bandwidth-overview-heading">Overall Bandwidth Overview</h2>
                 </div>
-                <table>
+                <table role="table" aria-label="Bandwidth overview">
                     <thead>
                         <tr>
-                            <th>Member</th>
-                            <th>Bandwidth Description</th>
-                            <th>Effective Bandwidth</th>
+                            <th scope="col">Member</th>
+                            <th scope="col">Bandwidth Description</th>
+                            <th scope="col">Effective Bandwidth</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Dynamic content -->
                     </tbody>
                 </table>
-            </div>
+            </section>
 
             <!-- Task sections will be dynamically generated -->
 
             <!-- Gantt Chart Section -->
-            <div class="section">
+            <section class="section" aria-labelledby="gantt-chart-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-gantt">📈</div>
-                    <h2>Sprint Timeline (Gantt Chart)</h2>
+                    <div class="section-icon icon-gantt" aria-hidden="true">📈</div>
+                    <h2 id="gantt-chart-heading">Sprint Timeline (Gantt Chart)</h2>
                 </div>
-                <div class="gantt-container">
-                    <table class="gantt-table">
+                <div class="gantt-container" role="region" aria-label="Gantt chart timeline" tabindex="0">
+                    <table class="gantt-table" role="table">
                         <thead>
                             <!-- Dynamic gantt headers -->
                         </thead>
@@ -79,28 +80,28 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
             <!-- Milestones Section -->
-            <div class="section">
+            <section class="section" aria-labelledby="milestones-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-milestone">🎯</div>
-                    <h2>Key Milestones</h2>
+                    <div class="section-icon icon-milestone" aria-hidden="true">🎯</div>
+                    <h2 id="milestones-heading">Key Milestones</h2>
                 </div>
-                <table>
+                <table role="table" aria-label="Project milestones">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Milestone</th>
-                            <th>Owner/Assignee</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Milestone</th>
+                            <th scope="col">Owner/Assignee</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Dynamic content -->
                     </tbody>
                 </table>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
     <!-- Scripts -->
     <script src="dataLoader.js"></script>

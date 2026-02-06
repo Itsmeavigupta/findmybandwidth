@@ -49,18 +49,62 @@ async function loadFromGoogleSheets() {
         console.log('🔄 Loading from Google Sheets...');
         
         // Load all sheets in parallel using gviz API with gid
-        const [configData, membersData, tasksData, milestonesData] = await Promise.all([
+        const results = await Promise.allSettled([
             fetchGoogleSheet('SPRINT_CONFIG', GOOGLE_SHEETS_CONFIG.gids.SPRINT_CONFIG),
             fetchGoogleSheet('MEMBERS', GOOGLE_SHEETS_CONFIG.gids.MEMBERS),
             fetchGoogleSheet('TASKS', GOOGLE_SHEETS_CONFIG.gids.TASKS),
             fetchGoogleSheet('MILESTONES', GOOGLE_SHEETS_CONFIG.gids.MILESTONES)
         ]);
         
-        // Normalize data
-        appData.project = normalizeSprintConfig(configData);
-        appData.teamMembers = normalizeMembers(membersData);
-        appData.tasks = normalizeTasks(tasksData);
-        appData.milestones = normalizeMilestones(milestonesData);
+        // Handle partial failures gracefully
+        const errors = [];
+        const [configResult, membersResult, tasksResult, milestonesResult] = results;
+        
+        if (configResult.status === 'rejected') {
+            errors.push(`SPRINT_CONFIG: ${configResult.reason}`);
+        }
+        if (membersResult.status === 'rejected') {
+            errors.push(`MEMBERS: ${membersResult.reason}`);
+        }
+        if (tasksResult.status === 'rejected') {
+            errors.push(`TASKS: ${tasksResult.reason}`);
+        }
+        // Milestones are optional
+        
+        if (errors.length > 0) {
+            throw new Error(`Failed to load required sheets:\n${errors.join('\n')}`);
+        }
+        
+        // Normalize data with error handling
+        try {
+            appData.project = normalizeSprintConfig(configResult.value);
+        } catch (err) {
+            console.error('Error normalizing SPRINT_CONFIG:', err);
+            throw new Error('Invalid SPRINT_CONFIG data structure');
+        }
+        
+        try {
+            appData.teamMembers = normalizeMembers(membersResult.value);
+        } catch (err) {
+            console.error('Error normalizing MEMBERS:', err);
+            throw new Error('Invalid MEMBERS data structure');
+        }
+        
+        try {
+            appData.tasks = normalizeTasks(tasksResult.value);
+        } catch (err) {
+            console.error('Error normalizing TASKS:', err);
+            throw new Error('Invalid TASKS data structure');
+        }
+        
+        try {
+            appData.milestones = milestonesResult.status === 'fulfilled' 
+                ? normalizeMilestones(milestonesResult.value) 
+                : [];
+        } catch (err) {
+            console.warn('Error normalizing MILESTONES (optional):', err);
+            appData.milestones = [];
+        }
         
         return true;
     } catch (error) {
@@ -244,21 +288,46 @@ function normalizeSprintConfig(rawData) {
  * Normalize MEMBERS data
  */
 function normalizeMembers(rawData) {
+    if (!Array.isArray(rawData)) {
+        throw new Error('MEMBERS data must be an array');
+    }
+    
     return rawData.map((row, index) => {
-        const id = (row.id || row.Id || row.ID || `member-${index}`).toLowerCase().trim();
-        const colorClass = (row.color_class || row['color class'] || row.ColorClass || getDefaultColorClass(id)).trim();
+        // Sanitize and validate inputs
+        const id = sanitizeId(row.id || row.Id || row.ID || `member-${index}`);
+        const name = sanitizeText(row.name || row.Name || row.NAME || `Member ${index + 1}`);
+        const colorClass = sanitizeColorClass(row.color_class || row['color class'] || row.ColorClass || getDefaultColorClass(id));
         
         return {
             id,
-            name: (row.name || row.Name || row.NAME || `Member ${index + 1}`).trim(),
-            role: (row.role || row.Role || row.ROLE || 'Team Member').trim(),
+            name,
+            role: sanitizeText(row.role || row.Role || row.ROLE || 'Team Member'),
             colorClass,
-            capacity: (row.capacity || row.Capacity || '100%').trim(),
-            focus: (row.focus || row.Focus || 'Sprint work').trim(),
-            bandwidthDesc: (row.bandwidth_desc || row['bandwidth desc'] || 'General tasks').trim(),
-            effectiveBandwidth: (row.effective_bandwidth || row['effective bandwidth'] || '100% sprint').trim()
+            capacity: sanitizeText(row.capacity || row.Capacity || '100%'),
+            focus: sanitizeText(row.focus || row.Focus || 'Sprint work'),
+            bandwidthDesc: sanitizeText(row.bandwidth_desc || row['bandwidth desc'] || 'General tasks'),
+            effectiveBandwidth: sanitizeText(row.effective_bandwidth || row['effective bandwidth'] || '100% sprint')
         };
     }).filter(member => member.id && member.name && member.id !== 'member-0');
+}
+
+/**
+ * Input sanitization helpers
+ */
+function sanitizeText(text) {
+    if (typeof text !== 'string') text = String(text || '');
+    return text.trim().substring(0, 500); // Limit length to prevent DoS
+}
+
+function sanitizeId(id) {
+    if (typeof id !== 'string') id = String(id || '');
+    return id.toLowerCase().trim().replace(/[^a-z0-9_-]/g, '').substring(0, 50);
+}
+
+function sanitizeColorClass(colorClass) {
+    const validColors = ['primary', 'success', 'warning', 'info', 'danger'];
+    const cleaned = colorClass.trim().toLowerCase();
+    return validColors.includes(cleaned) ? cleaned : 'primary';
 }
 
 /**
@@ -274,31 +343,78 @@ function getDefaultColorClass(id) {
  * Normalize TASKS data
  */
 function normalizeTasks(rawData) {
+    if (!Array.isArray(rawData)) {
+        throw new Error('TASKS data must be an array');
+    }
+    
     return rawData.map((row, index) => {
-        const id = (row.id || row.Id || row.ID || `T-${index + 1}`).trim();
-        const title = (row.title || row.Title || row.task || row.name || `Task ${index + 1}`).trim();
-        const owner = (row.owner || row.Owner || 'unassigned').toLowerCase().trim();
-        const priority = (row.priority || row.Priority || 'normal').toLowerCase().trim();
-        const validPriority = ['urgent', 'normal', 'pending'].includes(priority) ? priority : 'normal';
-        const completed = (row.completed || row.Completed || '').toString().toLowerCase() === 'true';
+        const id = sanitizeId(row.id || row.Id || row.ID || `T-${index + 1}`);
+        const title = sanitizeText(row.title || row.Title || row.task || row.name || `Task ${index + 1}`);
+        const owner = sanitizeId(row.owner || row.Owner || 'unassigned');
+        const priority = sanitizePriority(row.priority || row.Priority || 'normal');
+        const completed = sanitizeBoolean(row.completed || row.Completed);
+        
+        // Validate dates
+        const startDate = sanitizeDate(row.start_date || row['start date'] || row.StartDate);
+        const endDate = sanitizeDate(row.end_date || row['end date'] || row.EndDate);
         
         return {
             id,
             name: title,
-            jiraId: (row.jira || row.Jira || row.jira_id || '').trim(),
-            jiraUrl: (row.jira_url || row['jira url'] || row.jira_link || '').trim(),
+            jiraId: sanitizeText(row.jira || row.Jira || row.jira_id || ''),
+            jiraUrl: sanitizeUrl(row.jira_url || row['jira url'] || row.jira_link || ''),
             owner,
-            bu: (row.bu || row.BU || '').trim(),
-            status: (row.status || row.Status || 'Not Started').trim(),
-            priority: validPriority,
-            startDate: (row.start_date || row['start date'] || row.StartDate || '').trim(),
-            endDate: (row.end_date || row['end date'] || row.EndDate || '').trim(),
-            type: (row.type || row.Type || '').trim(),
-            blockers: (row.blocker || row.blockers || row.Blocker || '').trim(),
-            notes: (row.notes || row.Notes || '').trim(),
+            bu: sanitizeText(row.bu || row.BU || ''),
+            status: sanitizeText(row.status || row.Status || 'Not Started'),
+            priority,
+            startDate,
+            endDate,
+            type: sanitizeText(row.type || row.Type || ''),
+            blockers: sanitizeText(row.blocker || row.blockers || row.Blocker || ''),
+            notes: sanitizeText(row.notes || row.Notes || ''),
             completed
         };
-    }).filter(task => task.name && task.startDate && task.endDate);
+    }).filter(task => task.name && task.startDate && task.endDate && isValidDateRange(task.startDate, task.endDate));
+}
+
+/**
+ * Additional sanitization helpers
+ */
+function sanitizePriority(priority) {
+    const valid = ['urgent', 'normal', 'pending'];
+    const cleaned = String(priority).toLowerCase().trim();
+    return valid.includes(cleaned) ? cleaned : 'normal';
+}
+
+function sanitizeBoolean(value) {
+    return String(value).toLowerCase().trim() === 'true';
+}
+
+function sanitizeDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+}
+
+function sanitizeUrl(url) {
+    if (!url) return '';
+    const cleaned = sanitizeText(url);
+    // Basic URL validation
+    try {
+        if (cleaned.startsWith('http://') || cleaned.startsWith('https://') || cleaned.startsWith('#')) {
+            return cleaned;
+        }
+    } catch (e) {
+        console.warn('Invalid URL:', url);
+    }
+    return '';
+}
+
+function isValidDateRange(startDate, endDate) {
+    if (!startDate || !endDate) return false;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return start <= end;
 }
 
 /**

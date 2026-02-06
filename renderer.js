@@ -2,10 +2,21 @@
 // UTILITY FUNCTIONS
 // =============================================
 
+// Performance optimization: Memoization cache
+const memoCache = {
+    formatDate: new Map(),
+    workingDays: new Map()
+};
+
 function formatDate(dateStr) {
     if (!dateStr) return '';
+    if (memoCache.formatDate.has(dateStr)) {
+        return memoCache.formatDate.get(dateStr);
+    }
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    memoCache.formatDate.set(dateStr, formatted);
+    return formatted;
 }
 
 function getDaysBetween(start, end) {
@@ -16,6 +27,11 @@ function getDaysBetween(start, end) {
 }
 
 function getWorkingDays(start, end) {
+    const cacheKey = `${start}-${end}`;
+    if (memoCache.workingDays.has(cacheKey)) {
+        return memoCache.workingDays.get(cacheKey);
+    }
+    
     let count = 0;
     const startDate = new Date(start);
     const endDate = new Date(end);
@@ -26,6 +42,7 @@ function getWorkingDays(start, end) {
             count++;
         }
     }
+    memoCache.workingDays.set(cacheKey, count);
     return count;
 }
 
@@ -51,6 +68,19 @@ function isHoliday(dateStr) {
     return appData.holidays.some(h => h.date === dateStr);
 }
 
+// Debounce utility for performance optimization
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // =============================================
 // FILTERING
 // =============================================
@@ -63,10 +93,14 @@ let filters = {
     hideCompleted: false
 };
 
+// Debounced filter functions for better performance
+const debouncedRenderGantt = debounce(() => renderGanttChart(), 300);
+const debouncedRenderTasks = debounce(() => renderAllTaskCards(), 300);
+
 function filterSearch(value) {
     filters.search = value;
-    renderGanttChart();
-    renderAllTaskCards();
+    debouncedRenderGantt();
+    debouncedRenderTasks();
 }
 
 function filterOwner(value) {
@@ -160,23 +194,23 @@ function renderGanttChart() {
     
     console.log(`📋 Rendering ${filteredTasks.length} tasks across ${dateCount} days`);
     
-    // Build complete Gantt chart HTML with grid layout
-    let ganttHTML = `<div class="gantt-chart">`;
+    // Performance: Use array join instead of string concatenation
+    const ganttParts = ['<div class="gantt-chart">'];
     
     // Header row
-    ganttHTML += `<div class="gantt-header" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
-        <div class="gantt-header-task">Task / Timeline</div>`;
+    ganttParts.push(`<div class="gantt-header" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
+        <div class="gantt-header-task">Task / Timeline</div>`);
     
     dates.forEach(date => {
         const day = new Date(date).getDate();
         const isWE = isWeekend(date);
         const isHol = isHoliday(date);
         const isToday = date === today;
-        ganttHTML += `<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" title="${formatDate(date)}">${day}</div>`;
+        ganttParts.push(`<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" title="${formatDate(date)}">${day}</div>`);
     });
-    ganttHTML += `</div>`;
+    ganttParts.push('</div>');
     
-    // Task rows
+    // Task rows - optimized with reduced DOM queries
     filteredTasks.forEach(task => {
         const member = getTeamMember(task.owner);
         const ownerName = task.owner === 'both' ? 'Both' : (member ? member.name : task.owner);
@@ -184,26 +218,25 @@ function renderGanttChart() {
         const endDateFormatted = formatDate(task.endDate);
         const dateInfo = startDateFormatted === endDateFormatted ? startDateFormatted : `${startDateFormatted} - ${endDateFormatted}`;
         
-        ganttHTML += `<div class="gantt-row" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
+        ganttParts.push(`<div class="gantt-row" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
             <div class="gantt-task-name">
-                <span class="gantt-task-title">${task.name}</span>
-                <span class="gantt-task-owner">${ownerName} • ${dateInfo}</span>
-            </div>`;
+                <span class="gantt-task-title">${escapeHtml(task.name)}</span>
+                <span class="gantt-task-owner">${escapeHtml(ownerName)} • ${dateInfo}</span>
+            </div>`);
         
         // Create cells for each date
-        let taskStartIndex = -1;
-        let taskEndIndex = -1;
-        
-        dates.forEach((date, index) => {
-            if (date === task.startDate) taskStartIndex = index;
-            if (date === task.endDate) taskEndIndex = index;
-        });
+        let taskStartIndex = dates.indexOf(task.startDate);
+        let taskEndIndex = dates.indexOf(task.endDate);
         
         dates.forEach((date, index) => {
             const isWE = isWeekend(date);
             const isHol = isHoliday(date);
             const isToday = date === today;
-            let cellHTML = `<div class="gantt-cell ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}">`;
+            const cellClasses = ['gantt-cell'];
+            if (isWE || isHol) cellClasses.push('weekend');
+            if (isToday) cellClasses.push('today');
+            
+            ganttParts.push(`<div class="${cellClasses.join(' ')}">`);
             
             // Render task bar on start date cell
             if (index === taskStartIndex && taskEndIndex >= taskStartIndex) {
@@ -216,22 +249,28 @@ function renderGanttChart() {
                 const barWidth = `calc(${duration * 100}% - 4px)`;
                 const barLabel = workingDays > 0 ? `${workingDays}d` : '1d';
                 
-                cellHTML += `<div class="gantt-bar ${barClass}" style="left: 2px; width: ${barWidth};" title="${task.name}: ${dateInfo} (${workingDays} working days)">
+                ganttParts.push(`<div class="gantt-bar ${barClass}" style="left: 2px; width: ${barWidth};" title="${escapeHtml(task.name)}: ${dateInfo} (${workingDays} working days)" role="img" aria-label="Task duration: ${workingDays} working days">
                     <span class="gantt-bar-label">${barLabel}</span>
-                </div>`;
+                </div>`);
             }
             
-            cellHTML += `</div>`;
-            ganttHTML += cellHTML;
+            ganttParts.push('</div>');
         });
         
-        ganttHTML += `</div>`;
+        ganttParts.push('</div>');
     });
     
-    ganttHTML += `</div>`;
+    ganttParts.push('</div>');
     
-    // Replace container content
-    ganttContainer.innerHTML = ganttHTML;
+    // Single DOM update for better performance
+    ganttContainer.innerHTML = ganttParts.join('');
+}
+
+// XSS protection helper
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function renderTaskCards(owner) {
@@ -461,31 +500,78 @@ function addToolbar() {
     ).join('');
     
     content.insertAdjacentHTML('afterbegin', `
-        <div id="toolbar">
+        <div id="toolbar" role="toolbar" aria-label="Task filtering and actions toolbar">
             <div class="toolbar-group toolbar-actions">
-                <button onclick="window.print()" class="btn btn-print">🖨️ Print</button>
-                <button onclick="refreshData()" class="btn btn-refresh">🔄 Refresh</button>
-                <button onclick="exportData()" class="btn btn-export">📥 Export</button>
+                <button class="btn btn-print" data-action="print" aria-label="Print report">🖨️ Print</button>
+                <button class="btn btn-refresh" data-action="refresh" aria-label="Refresh data from Google Sheets">🔄 Refresh</button>
+                <button class="btn btn-export" data-action="export" aria-label="Export data as JSON">📥 Export</button>
             </div>
-            <input type="text" placeholder="🔍 Search tasks..." onkeyup="filterSearch(this.value)" class="toolbar-search">
+            <input type="text" placeholder="🔍 Search tasks..." class="toolbar-search" data-filter="search" aria-label="Search tasks">
             <div class="toolbar-group toolbar-filters">
-                <select onchange="filterOwner(this.value)" class="toolbar-select">
+                <select class="toolbar-select" data-filter="owner" aria-label="Filter by owner">
                     <option value="all">👥 All Owners</option>
                     ${ownerOptions}
                     <option value="both">Both</option>
                 </select>
-                <select onchange="filterPriority(this.value)" class="toolbar-select">
+                <select class="toolbar-select" data-filter="priority" aria-label="Filter by priority">
                     <option value="all">⚡ All Priorities</option>
                     <option value="urgent">🔴 Urgent</option>
                     <option value="normal">🟢 Normal</option>
                     <option value="pending">⏳ Pending</option>
                 </select>
                 <label class="toolbar-checkbox">
-                    <input type="checkbox" onchange="filterCompleted(this.checked)">
+                    <input type="checkbox" data-filter="completed" aria-label="Hide completed tasks">
                     <span>Hide Completed</span>
                 </label>
             </div>
         </div>
     `);
+    
+    // Event delegation for better performance
+    const toolbar = document.getElementById('toolbar');
+    toolbar.addEventListener('click', handleToolbarAction);
+    toolbar.addEventListener('change', handleToolbarFilter);
+    toolbar.addEventListener('input', handleToolbarInput);
+}
+
+// Event handlers using delegation
+function handleToolbarAction(e) {
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (!action) return;
+    
+    switch(action) {
+        case 'print':
+            window.print();
+            break;
+        case 'refresh':
+            if (typeof refreshData === 'function') refreshData();
+            break;
+        case 'export':
+            if (typeof exportData === 'function') exportData();
+            break;
+    }
+}
+
+function handleToolbarFilter(e) {
+    const filterType = e.target.dataset.filter;
+    if (!filterType) return;
+    
+    switch(filterType) {
+        case 'owner':
+            filterOwner(e.target.value);
+            break;
+        case 'priority':
+            filterPriority(e.target.value);
+            break;
+        case 'completed':
+            filterCompleted(e.target.checked);
+            break;
+    }
+}
+
+function handleToolbarInput(e) {
+    if (e.target.dataset.filter === 'search') {
+        filterSearch(e.target.value);
+    }
 }
 
