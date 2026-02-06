@@ -384,14 +384,14 @@ function updateLegend() {
 }
 
 function getGradientForColorClass(colorClass) {
-    const gradients = {
-        'primary': 'linear-gradient(135deg,#4361ee,#7c3aed)',
-        'success': 'linear-gradient(135deg,#10b981,#059669)',
-        'warning': 'linear-gradient(135deg,#f59e0b,#d97706)',
-        'danger': 'linear-gradient(135deg,#ef4444,#dc2626)',
-        'info': 'linear-gradient(135deg,#06b6d4,#0891b2)'
+    const colors = {
+        'primary': '#2563eb',
+        'success': '#059669',
+        'warning': '#d97706',
+        'danger': '#dc2626',
+        'info': '#0891b2'
     };
-    return gradients[colorClass] || gradients.primary;
+    return colors[colorClass] || colors.primary;
 }
 
 // =============================================
