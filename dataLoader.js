@@ -13,16 +13,13 @@
  * 4. Paste below
  */
 const GOOGLE_SHEETS_CONFIG = {
-    // Published Google Sheet ID (from File → Share → Publish to web)
-    // Example: https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/pubhtml
-    publishedId: '2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y',
-    
-    // Sheet names (must match your Google Sheet tabs exactly)
-    sheets: {
-        SPRINT_CONFIG: 'SPRINT_CONFIG',
-        MEMBERS: 'MEMBERS',
-        TASKS: 'TASKS',
-        MILESTONES: 'MILESTONES'
+    // Direct CSV URLs for each published sheet
+    // Get these from: File → Share → Publish to web → Select sheet → CSV
+    urls: {
+        SPRINT_CONFIG: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=0&single=true&output=csv',
+        MEMBERS: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=2073523473&single=true&output=csv',
+        TASKS: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=1579655569&single=true&output=csv',
+        MILESTONES: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=1458173099&single=true&output=csv'
     }
 };
 
@@ -48,17 +45,12 @@ async function loadFromGoogleSheets() {
     try {
         console.log('🔄 Loading from Google Sheets...');
         
-        // Check if Published ID is configured
-        if (!GOOGLE_SHEETS_CONFIG.publishedId || GOOGLE_SHEETS_CONFIG.publishedId === 'YOUR_PUBLISHED_ID_HERE') {
-            throw new Error('Please publish your Google Sheet and add the published ID to GOOGLE_SHEETS_CONFIG.publishedId in dataLoader.js');
-        }
-        
-        // Load all sheets in parallel
+        // Load all sheets in parallel using direct URLs
         const [configData, membersData, tasksData, milestonesData] = await Promise.all([
-            fetchGoogleSheet(GOOGLE_SHEETS_CONFIG.sheets.SPRINT_CONFIG),
-            fetchGoogleSheet(GOOGLE_SHEETS_CONFIG.sheets.MEMBERS),
-            fetchGoogleSheet(GOOGLE_SHEETS_CONFIG.sheets.TASKS),
-            fetchGoogleSheet(GOOGLE_SHEETS_CONFIG.sheets.MILESTONES)
+            fetchGoogleSheet('SPRINT_CONFIG', GOOGLE_SHEETS_CONFIG.urls.SPRINT_CONFIG),
+            fetchGoogleSheet('MEMBERS', GOOGLE_SHEETS_CONFIG.urls.MEMBERS),
+            fetchGoogleSheet('TASKS', GOOGLE_SHEETS_CONFIG.urls.TASKS),
+            fetchGoogleSheet('MILESTONES', GOOGLE_SHEETS_CONFIG.urls.MILESTONES)
         ]);
         
         // Normalize data
@@ -76,18 +68,16 @@ async function loadFromGoogleSheets() {
 
 /**
  * Fetch a specific sheet from Google Sheets as CSV
- * Uses CORS proxy to bypass browser restrictions
+ * Uses direct published URL with CORS proxy
  */
-async function fetchGoogleSheet(sheetName) {
-    // Published Google Sheets CSV export URL format
-    const csvUrl = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEETS_CONFIG.publishedId}/pub?output=csv&sheet=${encodeURIComponent(sheetName)}`;
-    
+async function fetchGoogleSheet(sheetName, csvUrl) {
     // Use CORS proxy to bypass browser restrictions
     const corsProxy = 'https://corsproxy.io/?';
     const proxiedUrl = corsProxy + encodeURIComponent(csvUrl);
     
     try {
         console.log(`📥 Fetching ${sheetName} from Google Sheets...`);
+        console.log(`   URL: ${csvUrl}`);
         
         const response = await fetch(proxiedUrl);
         
