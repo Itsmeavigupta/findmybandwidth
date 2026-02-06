@@ -404,11 +404,16 @@ function loadFallbackData() {
 async function refreshData() {
     showLoadingIndicator();
     const success = await loadAllData();
-    hideLoadingIndicator();
     
     if (success && typeof renderAll === 'function') {
         renderAll();
     }
+    
+    // Hide loading indicator after rendering completes
+    setTimeout(() => {
+        hideLoadingIndicator();
+    }, 300);
+    
     return success;
 }
 
@@ -525,11 +530,16 @@ if (typeof window !== 'undefined') {
     window.addEventListener('DOMContentLoaded', async () => {
         showLoadingIndicator();
         const success = await loadAllData();
-        hideLoadingIndicator();
         
         // Render the UI after data loads
         if (success && typeof renderAll === 'function') {
             renderAll();
         }
+        
+        // Hide loading indicator after rendering completes
+        // Small delay to ensure DOM updates are visible
+        setTimeout(() => {
+            hideLoadingIndicator();
+        }, 300);
     });
 }
