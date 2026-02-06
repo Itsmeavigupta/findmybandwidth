@@ -149,8 +149,8 @@ function renderGanttChart() {
     if (!appData.project || !appData.tasks) return;
     
     const dates = generateDateRange(appData.project.startDate, appData.project.endDate);
-    const ganttChart = document.querySelector('.gantt-chart');
-    if (!ganttChart) return;
+    const ganttContainer = document.querySelector('.gantt-container');
+    if (!ganttContainer) return;
     
     // Calculate dynamic column count
     const dateCount = dates.length;
@@ -210,7 +210,7 @@ function renderGanttChart() {
         rowsHTML += `</div>`;
     });
     
-    ganttChart.innerHTML = headerHTML + rowsHTML;
+    ganttContainer.innerHTML = headerHTML + rowsHTML;
 }
 
 function renderTaskCards(owner) {
@@ -282,17 +282,26 @@ function renderAllTaskCards() {
 function renderMilestones() {
     if (!appData.milestones || appData.milestones.length === 0) return;
     
-    const grid = document.querySelector('.milestones-grid');
-    if (!grid) return;
+    // Find milestones section table tbody
+    const sections = document.querySelectorAll('.section');
+    let milestonesTable = null;
     
-    grid.innerHTML = appData.milestones.map(m => `
-        <div class="milestone-item">
-            <div class="milestone-date">${formatDate(m.date)}</div>
-            <div class="milestone-details">
-                <h4>${m.title}</h4>
-                <span>${m.assignee}</span>
-            </div>
-        </div>
+    for (const section of sections) {
+        const header = section.querySelector('.section-header h2');
+        if (header && header.textContent.includes('Milestones')) {
+            milestonesTable = section.querySelector('table tbody');
+            break;
+        }
+    }
+    
+    if (!milestonesTable) return;
+    
+    milestonesTable.innerHTML = appData.milestones.map(m => `
+        <tr>
+            <td>${formatDate(m.date)}</td>
+            <td><strong>${m.title}</strong></td>
+            <td>${m.assignee}</td>
+        </tr>
     `).join('');
 }
 
