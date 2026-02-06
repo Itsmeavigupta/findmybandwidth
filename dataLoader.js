@@ -71,21 +71,25 @@ async function loadFromGoogleSheets() {
 
 /**
  * Fetch a specific sheet from Google Sheets as CSV
- * Uses gviz/tq API endpoint which returns data without triggering download
+ * Uses gviz/tq API endpoint - works on GitHub Pages without CORS proxy
  */
 async function fetchGoogleSheet(sheetName, gid) {
-    // Use gviz/tq endpoint with gid parameter - returns CSV without download
+    // Use gviz/tq endpoint with gid parameter
     const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
-    
-    // Use CORS proxy to bypass browser restrictions
-    const corsProxy = 'https://corsproxy.io/?';
-    const proxiedUrl = corsProxy + encodeURIComponent(csvUrl);
     
     try {
         console.log(`📥 Fetching ${sheetName} (gid=${gid}) from Google Sheets...`);
         console.log(`   URL: ${csvUrl}`);
         
-        const response = await fetch(proxiedUrl);
+        // Try direct fetch first (works on most servers)
+        let response = await fetch(csvUrl);
+        
+        // If CORS blocked, try with cors-anywhere as fallback
+        if (!response.ok && response.status === 0) {
+            console.log(`   ⚠️ CORS blocked, trying proxy...`);
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
+            response = await fetch(proxyUrl);
+        }
         
         if (!response.ok) {
             throw new Error(`Failed to fetch ${sheetName}: ${response.status}. Make sure sheet is shared publicly (Anyone with link can view).`);
