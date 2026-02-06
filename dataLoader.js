@@ -81,22 +81,35 @@ async function fetchGoogleSheet(sheetName, gid) {
         console.log(`📥 Fetching ${sheetName} (gid=${gid}) from Google Sheets...`);
         console.log(`   URL: ${csvUrl}`);
         
-        // Try direct fetch first (works on most servers)
-        let response = await fetch(csvUrl);
+        // For local testing, try proxy first to avoid CORS issues
+        let response;
+        let usedProxy = false;
         
-        // If CORS blocked, try with cors-anywhere as fallback
-        if (!response.ok && response.status === 0) {
-            console.log(`   ⚠️ CORS blocked, trying proxy...`);
+        try {
+            // Try proxy first for local development
+            console.log(`   🔄 Trying proxy first for local testing...`);
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
             response = await fetch(proxyUrl);
+            usedProxy = true;
+        } catch (proxyError) {
+            console.log(`   ⚠️ Proxy failed, trying direct fetch...`);
+            response = await fetch(csvUrl);
+            usedProxy = false;
         }
         
         if (!response.ok) {
-            throw new Error(`Failed to fetch ${sheetName}: ${response.status}. Make sure sheet is shared publicly (Anyone with link can view).`);
+            throw new Error(`Failed to fetch ${sheetName}: ${response.status}. Make sure sheet is shared publicly (Anyone with link can view). URL: ${csvUrl}`);
         }
         
         const csvText = await response.text();
+        console.log(`   ✅ Fetched via ${usedProxy ? 'proxy' : 'direct'}: ${csvText.length} chars`);
+        
+        // Log first few lines for debugging
+        const lines = csvText.split('\n').slice(0, 3);
+        console.log(`   📄 Sample data:`, lines);
+        
         const data = parseCSV(csvText);
+        console.log(`   📊 Parsed ${data.length} rows`);
         
         console.log(`✅ ${sheetName}: ${data.length} rows loaded`);
         return data;
@@ -162,41 +175,38 @@ function parseCSVLine(line) {
  * Normalize SPRINT_CONFIG data
  */
 function normalizeSprintConfig(rawData) {
+    console.log('🔧 normalizeSprintConfig input:', rawData);
     const config = {};
     
-    rawData.forEach(row => {
-        // Handle various column name formats
-        const key = (row.key || row.Key || row.KEY || row['key sprint_name'] || '').trim();
-        const value = (row.value || row.Value || row.VALUE || row['value Demo Sprint - Jan-Feb 2026'] || '').trim();
+    rawData.forEach((row, index) => {
+        console.log(`   Row ${index}:`, row);
         
-        // If key is empty but we have other columns, try to use first column as key, second as value
-        if (!key && Object.keys(row).length >= 2) {
-            const keys = Object.keys(row);
-            const firstCol = keys[0];
-            const secondCol = keys[1];
-            if (row[firstCol] && row[secondCol]) {
-                config[row[firstCol].trim()] = row[secondCol].trim();
-                return;
+        // Handle standard key-value columns
+        let key = (row.key || row.Key || row.KEY || '').trim();
+        let value = (row.value || row.Value || row.VALUE || '').trim();
+        
+        // Handle special case where key column contains the key name
+        if (!key) {
+            // Check if any property starts with "key "
+            const keyProp = Object.keys(row).find(k => k.toLowerCase().startsWith('key'));
+            if (keyProp) {
+                key = keyProp.replace(/^key\s+/i, '').trim();
+                value = row[keyProp];
+                console.log(`   📝 Found key property "${keyProp}" -> key="${key}", value="${value}"`);
             }
         }
         
-        if (key) {
-            // Clean up the key and value
-            const cleanKey = key.replace(/^key\s+/i, '').trim();
-            const cleanValue = value.replace(/^value\s+/i, '').trim();
-            
-            // Handle special cases
-            if (cleanKey === 'sprint_name' || cleanKey.includes('sprint_name')) {
-                config['sprint_name'] = cleanValue;
-            } else if (cleanKey === 'start_date' || cleanKey.includes('start_date')) {
-                config['start_date'] = cleanValue;
-            } else if (cleanKey === 'end_date' || cleanKey.includes('end_date')) {
-                config['end_date'] = cleanValue;
-            } else if (cleanKey === 'prepared_by' || cleanKey.includes('prepared_by')) {
-                config['prepared_by'] = cleanValue;
-            } else {
-                config[cleanKey] = cleanValue;
-            }
+        // Handle special case where value column contains the value with prefix
+        if (value && value.toLowerCase().startsWith('value ')) {
+            value = value.replace(/^value\s+/i, '').trim();
+            console.log(`   📝 Stripped "value " prefix: "${value}"`);
+        }
+        
+        if (key && value) {
+            config[key] = value;
+            console.log(`   ✅ Added config[${key}] = "${value}"`);
+        } else {
+            console.log(`   ⚠️ Skipping row - key="${key}", value="${value}"`);
         }
     });
     
@@ -295,8 +305,16 @@ function normalizeMilestones(rawData) {
  */
 async function loadAllData() {
     try {
+        console.log('🚀 Starting data load...');
         // Load from Google Sheets (real-time collaboration!)
         await loadFromGoogleSheets();
+        
+        console.log('✅ Data loaded from sheets:', {
+            project: appData.project,
+            teamMembers: appData.teamMembers?.length,
+            tasks: appData.tasks?.length,
+            milestones: appData.milestones?.length
+        });
         
         validateData();
         
@@ -316,6 +334,12 @@ async function loadAllData() {
         
         // Load fallback demo data
         loadFallbackData();
+        
+        // Still try to render with fallback data
+        if (typeof renderAll === 'function') {
+            renderAll();
+        }
+        
         return false;
     }
 }
@@ -533,7 +557,7 @@ function getFilteredTasks() {
     if (typeof filters !== 'undefined') {
         return appData.tasks.filter(task => {
             if (filters.hideCompleted && task.completed) return false;
-            if (filters.owner !== 'all' && task.owner !== filters.owner && !(filters.owner === 'both' && task.owner === 'both')) return false;
+            if (filters.owner !== 'all' && task.owner !== filters.owner && task.owner !== 'both') return false;
             if (filters.status !== 'all' && !task.status.toLowerCase().includes(filters.status.toLowerCase())) return false;
             if (filters.priority !== 'all' && task.priority !== filters.priority) return false;
             if (filters.search && !task.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
