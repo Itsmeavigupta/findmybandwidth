@@ -311,6 +311,13 @@ function renderAll() {
         return;
     }
     
+    // Setup dynamic sections first (create task sections for each team member)
+    setupDynamicSections();
+    
+    // Add toolbar if not present
+    addToolbar();
+    
+    // Then render all content
     renderHeader();
     renderTeamOverview();
     renderBandwidthOverview();
@@ -370,25 +377,8 @@ function getGradientForColorClass(colorClass) {
 // INITIALIZATION
 // =============================================
 
-document.addEventListener('DOMContentLoaded', async function() {
-    // Wait for data to load (loaded by dataLoader.js)
-    let retries = 0;
-    const maxRetries = 50; // 5 seconds max wait
-    
-    while (!appData.loaded && retries < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        retries++;
-    }
-    
-    if (!appData.loaded) {
-        console.error('Failed to load data within timeout');
-        return;
-    }
-    
-    renderAll();
-    setupDynamicSections();
-    addToolbar();
-});
+// Note: renderAll() is called from dataLoader.js after data loads
+// This DOMContentLoaded handler is just a fallback
 
 /**
  * Dynamically create task sections for each team member
