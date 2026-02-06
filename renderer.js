@@ -149,68 +149,89 @@ function renderGanttChart() {
     if (!appData.project || !appData.tasks) return;
     
     const dates = generateDateRange(appData.project.startDate, appData.project.endDate);
+    console.log(`📊 Gantt Chart: ${dates.length} days from ${appData.project.startDate} to ${appData.project.endDate}`);
+    
     const ganttContainer = document.querySelector('.gantt-container');
     if (!ganttContainer) return;
     
-    // Calculate dynamic column count
+    const filteredTasks = getFilteredTasks();
     const dateCount = dates.length;
+    const today = new Date().toISOString().split('T')[0];
     
-    // Render header
-    let headerHTML = `<div class="gantt-header" style="grid-template-columns: 200px repeat(${dateCount}, 1fr);">
-        <div class="gantt-header-task">Task</div>`;
+    console.log(`📋 Rendering ${filteredTasks.length} tasks across ${dateCount} days`);
+    
+    // Build complete Gantt chart HTML with grid layout
+    let ganttHTML = `<div class="gantt-chart">`;
+    
+    // Header row
+    ganttHTML += `<div class="gantt-header" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
+        <div class="gantt-header-task">Task / Timeline</div>`;
     
     dates.forEach(date => {
         const day = new Date(date).getDate();
         const isWE = isWeekend(date);
         const isHol = isHoliday(date);
-        headerHTML += `<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''}">${day}</div>`;
+        const isToday = date === today;
+        ganttHTML += `<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" title="${formatDate(date)}">${day}</div>`;
     });
-    headerHTML += `</div>`;
+    ganttHTML += `</div>`;
     
-    // Render task rows
-    const filteredTasks = getFilteredTasks();
-    let rowsHTML = '';
-    
+    // Task rows
     filteredTasks.forEach(task => {
         const member = getTeamMember(task.owner);
         const ownerName = task.owner === 'both' ? 'Both' : (member ? member.name : task.owner);
-        const dateInfo = `${formatDate(task.startDate)}${task.startDate !== task.endDate ? ' - ' + formatDate(task.endDate) : ''}`;
+        const startDateFormatted = formatDate(task.startDate);
+        const endDateFormatted = formatDate(task.endDate);
+        const dateInfo = startDateFormatted === endDateFormatted ? startDateFormatted : `${startDateFormatted} - ${endDateFormatted}`;
         
-        rowsHTML += `<div class="gantt-row" style="grid-template-columns: 200px repeat(${dateCount}, 1fr);">
+        ganttHTML += `<div class="gantt-row" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
             <div class="gantt-task-name">
-                ${task.name}
-                <span class="gantt-task-owner">${ownerName} | ${dateInfo}</span>
+                <span class="gantt-task-title">${task.name}</span>
+                <span class="gantt-task-owner">${ownerName} • ${dateInfo}</span>
             </div>`;
         
-        // Calculate bar position and width
-        dates.forEach(date => {
+        // Create cells for each date
+        let taskStartIndex = -1;
+        let taskEndIndex = -1;
+        
+        dates.forEach((date, index) => {
+            if (date === task.startDate) taskStartIndex = index;
+            if (date === task.endDate) taskEndIndex = index;
+        });
+        
+        dates.forEach((date, index) => {
             const isWE = isWeekend(date);
             const isHol = isHoliday(date);
-            let cellHTML = `<div class="gantt-cell ${isWE || isHol ? 'weekend' : ''}">`;
+            const isToday = date === today;
+            let cellHTML = `<div class="gantt-cell ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}">`;
             
-            // Check if task bar should appear in this cell
-            if (date === task.startDate) {
-                const duration = getDaysBetween(task.startDate, task.endDate);
+            // Render task bar on start date cell
+            if (index === taskStartIndex && taskEndIndex >= taskStartIndex) {
+                const duration = taskEndIndex - taskStartIndex + 1;
                 const barClass = task.priority === 'urgent' ? 'bar-urgent' : 
                                task.priority === 'pending' ? 'bar-pending' :
                                member ? `bar-${member.colorClass}` : 'bar-primary';
                 
                 const workingDays = getWorkingDays(task.startDate, task.endDate);
-                const opacity = task.owner === 'both' ? 'opacity:0.5;' : '';
+                const barWidth = `calc(${duration * 100}% - 4px)`;
+                const barLabel = workingDays > 0 ? `${workingDays}d` : '1d';
                 
-                cellHTML += `<div class="gantt-bar ${barClass}" style="left:2px;width:calc(${duration * 100}% - 4px);${opacity}">
-                    ${dateInfo} ${workingDays > 1 ? `(${workingDays} days)` : ''}
+                cellHTML += `<div class="gantt-bar ${barClass}" style="left: 2px; width: ${barWidth};" title="${task.name}: ${dateInfo} (${workingDays} working days)">
+                    <span class="gantt-bar-label">${barLabel}</span>
                 </div>`;
             }
             
             cellHTML += `</div>`;
-            rowsHTML += cellHTML;
+            ganttHTML += cellHTML;
         });
         
-        rowsHTML += `</div>`;
+        ganttHTML += `</div>`;
     });
     
-    ganttContainer.innerHTML = headerHTML + rowsHTML;
+    ganttHTML += `</div>`;
+    
+    // Replace container content
+    ganttContainer.innerHTML = ganttHTML;
 }
 
 function renderTaskCards(owner) {
