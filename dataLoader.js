@@ -13,13 +13,16 @@
  * 4. Paste below
  */
 const GOOGLE_SHEETS_CONFIG = {
-    // Direct CSV URLs for each published sheet
-    // Get these from: File → Share → Publish to web → Select sheet → CSV
-    urls: {
-        SPRINT_CONFIG: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=0&single=true&output=csv',
-        MEMBERS: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=2073523473&single=true&output=csv',
-        TASKS: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=1579655569&single=true&output=csv',
-        MILESTONES: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1yug_CXB7tykehzxXN7xuEynXwVEF0F5TGCu6jr4-eJsYprpnAnQvBIDVX_RwWe9tOYHjTX9X7l1Y/pub?gid=1458173099&single=true&output=csv'
+    // Google Sheets gviz/tq endpoint returns CSV data without download
+    // Using the original sheet ID with gviz API
+    sheetId: '1_ZHZV-9X_CZ4GhrFUaon1Xv-f4JHnd1_NfSKLuclBQc',
+    
+    // GID for each sheet (from the URL #gid=...)
+    gids: {
+        SPRINT_CONFIG: '0',
+        MEMBERS: '2073523473',
+        TASKS: '1579655569',
+        MILESTONES: '1458173099'
     }
 };
 
@@ -45,12 +48,12 @@ async function loadFromGoogleSheets() {
     try {
         console.log('🔄 Loading from Google Sheets...');
         
-        // Load all sheets in parallel using direct URLs
+        // Load all sheets in parallel using gviz API with gid
         const [configData, membersData, tasksData, milestonesData] = await Promise.all([
-            fetchGoogleSheet('SPRINT_CONFIG', GOOGLE_SHEETS_CONFIG.urls.SPRINT_CONFIG),
-            fetchGoogleSheet('MEMBERS', GOOGLE_SHEETS_CONFIG.urls.MEMBERS),
-            fetchGoogleSheet('TASKS', GOOGLE_SHEETS_CONFIG.urls.TASKS),
-            fetchGoogleSheet('MILESTONES', GOOGLE_SHEETS_CONFIG.urls.MILESTONES)
+            fetchGoogleSheet('SPRINT_CONFIG', GOOGLE_SHEETS_CONFIG.gids.SPRINT_CONFIG),
+            fetchGoogleSheet('MEMBERS', GOOGLE_SHEETS_CONFIG.gids.MEMBERS),
+            fetchGoogleSheet('TASKS', GOOGLE_SHEETS_CONFIG.gids.TASKS),
+            fetchGoogleSheet('MILESTONES', GOOGLE_SHEETS_CONFIG.gids.MILESTONES)
         ]);
         
         // Normalize data
@@ -68,21 +71,24 @@ async function loadFromGoogleSheets() {
 
 /**
  * Fetch a specific sheet from Google Sheets as CSV
- * Uses direct published URL with CORS proxy
+ * Uses gviz/tq API endpoint which returns data without triggering download
  */
-async function fetchGoogleSheet(sheetName, csvUrl) {
+async function fetchGoogleSheet(sheetName, gid) {
+    // Use gviz/tq endpoint with gid parameter - returns CSV without download
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    
     // Use CORS proxy to bypass browser restrictions
     const corsProxy = 'https://corsproxy.io/?';
     const proxiedUrl = corsProxy + encodeURIComponent(csvUrl);
     
     try {
-        console.log(`📥 Fetching ${sheetName} from Google Sheets...`);
+        console.log(`📥 Fetching ${sheetName} (gid=${gid}) from Google Sheets...`);
         console.log(`   URL: ${csvUrl}`);
         
         const response = await fetch(proxiedUrl);
         
         if (!response.ok) {
-            throw new Error(`Failed to fetch ${sheetName}: ${response.status}. Make sure sheet is published to web (File → Share → Publish to web).`);
+            throw new Error(`Failed to fetch ${sheetName}: ${response.status}. Make sure sheet is shared publicly (Anyone with link can view).`);
         }
         
         const csvText = await response.text();
