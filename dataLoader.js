@@ -524,7 +524,12 @@ function showError(message) {
 if (typeof window !== 'undefined') {
     window.addEventListener('DOMContentLoaded', async () => {
         showLoadingIndicator();
-        await loadAllData();
+        const success = await loadAllData();
         hideLoadingIndicator();
+        
+        // Render the UI after data loads
+        if (success && typeof renderAll === 'function') {
+            renderAll();
+        }
     });
 }
