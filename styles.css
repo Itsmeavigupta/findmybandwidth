@@ -237,6 +237,12 @@ th {
     margin-top: 10px;
 }
 
+.gantt-container table {
+    min-width: 850px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
 .gantt-chart {
     min-width: 850px;
 }
@@ -361,6 +367,14 @@ th {
     background: linear-gradient(135deg, #94a3b8, #64748b);
 }
 
+/* Gantt row hover effect */
+.gantt-row:hover {
+    background: #f1f5f9 !important;
+}
+
+.gantt-row:hover .gantt-task-name {
+    background: #e0f2fe;
+}
 
 .legend {
     display: flex;
