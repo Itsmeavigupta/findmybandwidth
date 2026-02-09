@@ -1736,17 +1736,6 @@ tbody tr:last-child td {
     box-shadow: var(--focus-ring);
 }
 
-/* Swipe Gestures Support */
-.swipe-indicator {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    color: var(--gray-400);
-    font-size: 0.8rem;
-    pointer-events: none;
-}
-
 /* Loading States */
 .mobile-loading {
     display: flex;

@@ -1699,9 +1699,6 @@ function initializeMobileUI() {
     // Setup mobile navigation
     setupMobileNavigation();
     
-    // Setup touch gestures
-    setupTouchGestures();
-    
     // Render initial mobile section
     renderMobileSection('dashboard');
     
@@ -1841,70 +1838,6 @@ function handleOverlayAction(action) {
             }
             break;
     }
-}
-
-// Store reference to prevent duplicate listeners
-let touchGesturesSetup = false;
-
-function setupTouchGestures() {
-    if (touchGesturesSetup) return;
-    touchGesturesSetup = true;
-    
-    let startX, startY;
-    const threshold = 50;
-    
-    document.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    document.addEventListener('touchend', (e) => {
-        if (startX == null || startY == null) return;
-        
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-        const diffX = startX - endX;
-        const diffY = startY - endY;
-        
-        // Horizontal swipe
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
-            if (diffX > 0) {
-                // Swipe left - next section
-                navigateMobileSection('next');
-            } else {
-                // Swipe right - previous section
-                navigateMobileSection('prev');
-            }
-        }
-        
-        startX = startY = null;
-    }, { passive: true });
-}
-
-function navigateMobileSection(direction) {
-    const sections = ['dashboard', 'team', 'bandwidth', 'tasks', 'milestones'];
-    const currentSection = document.querySelector('.mobile-nav-item.active')?.dataset.section || 'dashboard';
-    let currentIndex = sections.indexOf(currentSection);
-    
-    // Guard against currentSection not being in sections array
-    if (currentIndex === -1) {
-        currentIndex = 0; // Default to first section
-    }
-    
-    let newIndex;
-    if (direction === 'next') {
-        newIndex = (currentIndex + 1) % sections.length;
-    } else {
-        newIndex = (currentIndex - 1 + sections.length) % sections.length;
-    }
-    
-    const newSection = sections[newIndex];
-    renderMobileSection(newSection);
-    
-    // Update navigation
-    document.querySelectorAll('.mobile-nav-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.section === newSection);
-    });
 }
 
 function hideMobileLoading() {
