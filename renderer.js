@@ -2392,24 +2392,19 @@ function renderMobileTasks() {
     
     const html = `
         <div class="mobile-tasks-view">
-            <!-- Quick Status Summary -->
-            <div class="mobile-card tasks-summary">
-                <div class="card-header">
-                    <h3>Task Summary</h3>
-                </div>
-                <div class="status-pills">
-                    ${statusPriority.map(status => {
-                        const count = statusCounts[status] || 0;
-                        if (count === 0) return '';
-                        return `<span class="status-pill status-${status}" style="--status-color: ${statusColors[status]}">${status}: ${count}</span>`;
-                    }).join('')}
-                </div>
-            </div>
-            
             <!-- Task List - Status is Primary Signal -->
             <div class="mobile-card tasks-list">
                 <div class="card-header">
                     <h3>All Tasks (${appData.tasks.length})</h3>
+                    <div class="task-status-icons">
+                        ${statusPriority.map(status => {
+                            const count = statusCounts[status] || 0;
+                            if (count === 0) return '';
+                            return `<span class="status-icon-pill status-${status}" style="--status-color: ${statusColors[status]}" title="${status}: ${count} tasks">
+                                <span class="status-count">${count}</span>
+                            </span>`;
+                        }).join('')}
+                    </div>
                 </div>
                 <div class="tasks-scroll-list">
                     ${sortedTasks.map(task => {

@@ -2995,6 +2995,44 @@ tbody tr:last-child td {
         align-items: center;
         gap: 12px;
         margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .card-header h3 {
+        flex: 0 0 auto;
+    }
+    
+    .task-status-icons {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        flex-wrap: wrap;
+    }
+    
+    .status-icon-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 14px;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--status-color);
+        color: white;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        cursor: help;
+    }
+    
+    .status-icon-pill.status-blocked {
+        animation: pulse-danger 2s ease-in-out infinite;
+    }
+    
+    .status-count {
+        line-height: 1;
     }
     
     .card-header i {
