@@ -764,8 +764,348 @@ tbody tr:last-child td {
 
 /* Toolbar Styles - Consolidated */
 
-/* Mobile Responsiveness */
-@media screen and (max-width: 768px) {
+/* Executive Dashboard */
+.dashboard-section {
+    background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+.metric-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.metric-card:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+.metric-icon {
+    font-size: 2rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--gray-100);
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-content h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 2px;
+}
+
+.metric-subtitle {
+    font-size: 0.8rem;
+    color: var(--gray-600);
+}
+
+/* Status-specific metric cards */
+.sprint-progress .metric-icon {
+    background: linear-gradient(135deg, var(--success), var(--success-dark));
+    color: white;
+}
+
+.team-utilization .metric-icon {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+}
+
+.risk-indicator .metric-icon {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    color: white;
+}
+
+.burndown-chart .metric-icon {
+    background: linear-gradient(135deg, var(--info), #0891b2);
+    color: white;
+}
+
+/* Burndown mini chart */
+.burndown-mini {
+    height: 40px;
+    position: relative;
+    background: var(--gray-50);
+    border-radius: 4px;
+    margin: 8px 0;
+    overflow: hidden;
+}
+
+.burndown-line, .burndown-ideal {
+    position: absolute;
+    height: 2px;
+    border-radius: 1px;
+}
+
+.burndown-line {
+    background: var(--primary);
+    width: 100%;
+    bottom: 0;
+}
+
+.burndown-ideal {
+    background: var(--success);
+    width: 100%;
+    top: 0;
+}
+
+/* Status breakdown */
+.status-breakdown {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.status-breakdown h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 16px;
+}
+
+.status-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-bar-label {
+    min-width: 120px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.status-bar-container {
+    flex: 1;
+    height: 20px;
+    background: var(--gray-200);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.status-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.status-bar-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    min-width: 40px;
+    text-align: right;
+}
+
+/* Virtual Scrolling */
+.gantt-virtual-container {
+    height: 600px;
+    overflow: hidden;
+    position: relative;
+}
+
+.gantt-viewport {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.gantt-virtual-content {
+    position: relative;
+    will-change: transform;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .metric-card {
+        padding: 16px;
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+    }
+    
+    .status-breakdown {
+        padding: 16px;
+    }
+    
+    .status-bar-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .status-bar-label {
+        min-width: auto;
+        font-size: 0.8rem;
+    }
+    
+    .status-bar-container {
+        width: 100%;
+        height: 16px;
+    }
+    
+    /* Touch-friendly Gantt */
+    .gantt-container {
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pinch-zoom;
+    }
+    
+    .gantt-row:focus {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+    }
+    
+    .gantt-cell:focus {
+        background: rgba(37, 99, 235, 0.1);
+        outline: 1px solid var(--primary);
+    }
+    
+    /* Zoom controls for mobile */
+    .zoom-controls {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1000;
+    }
+    
+    .zoom-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow);
+    }
+    
+    .zoom-btn:active {
+        transform: scale(0.95);
+    }
+}
+
+/* Risk level colors */
+.risk-low .metric-icon {
+    background: linear-gradient(135deg, var(--success), var(--success-dark));
+}
+
+.risk-medium .metric-icon {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+}
+
+.risk-high .metric-icon {
+    background: linear-gradient(135deg, var(--danger), #dc2626);
+}
+
+/* Focus and keyboard navigation styles */
+.section:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.task-card:focus,
+.gantt-row:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    background: rgba(37, 99, 235, 0.05);
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .metric-card,
+    .status-bar-fill,
+    .gantt-row {
+        transition: none !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .metric-card {
+        border: 2px solid var(--dark);
+    }
+    
+    .status-bar-container {
+        border: 1px solid var(--dark);
+    }
+}
+
+/* Print styles for dashboard */
+@media print {
+    .dashboard-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .metric-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+}
     body {
         padding: 12px;
         font-size: 13px;
@@ -957,7 +1297,6 @@ tbody tr:last-child td {
     button, input, select {
         min-height: 44px;
     }
-}
 
 /* Tablet Responsiveness */
 @media screen and (min-width: 769px) and (max-width: 1024px) {

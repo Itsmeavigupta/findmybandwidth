@@ -81,6 +81,13 @@ function debounce(func, wait) {
     };
 }
 
+// XSS protection helper
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // =============================================
 // FILTERING
 // =============================================
@@ -489,8 +496,19 @@ function renderAll() {
     // Add toolbar if not present
     addToolbar();
     
+    // Initialize advanced features
+    initializeKeyboardNavigation();
+    initializeMobileOptimizations();
+    
+    // Check if we should use virtual scrolling (for large datasets)
+    const shouldUseVirtualScrolling = appData.tasks && appData.tasks.length > 30;
+    if (shouldUseVirtualScrolling) {
+        initializeVirtualScrolling();
+    }
+    
     // Then render all content
     renderHeader();
+    renderExecutiveDashboard();
     renderTeamOverview();
     renderBandwidthOverview();
     renderGanttChart();
@@ -684,6 +702,614 @@ function handleToolbarFilter(e) {
 function handleToolbarInput(e) {
     if (e.target.dataset.filter === 'search') {
         filterSearch(e.target.value);
+    }
+}
+
+// =============================================
+// EXECUTIVE DASHBOARD FUNCTIONS
+// =============================================
+
+function renderExecutiveDashboard() {
+    if (!appData.tasks || !appData.teamMembers) return;
+    
+    // Calculate sprint progress
+    const totalTasks = appData.tasks.length;
+    const completedTasks = appData.tasks.filter(task => task.completed).length;
+    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
+    // Update sprint progress
+    const progressValue = document.getElementById('sprint-progress-value');
+    const progressSubtitle = document.getElementById('sprint-progress-subtitle');
+    if (progressValue) progressValue.textContent = `${progressPercent}%`;
+    if (progressSubtitle) progressSubtitle.textContent = `${completedTasks} of ${totalTasks} tasks completed`;
+    
+    // Calculate team utilization
+    const totalCapacity = appData.teamMembers.reduce((sum, member) => sum + (member.capacity || 0), 0);
+    const assignedTasks = appData.tasks.filter(task => task.owner !== 'both').length;
+    const utilizationPercent = totalCapacity > 0 ? Math.min(Math.round((assignedTasks / totalCapacity) * 100), 100) : 0;
+    
+    const utilizationValue = document.getElementById('team-utilization-value');
+    if (utilizationValue) utilizationValue.textContent = `${utilizationPercent}%`;
+    
+    // Calculate risk level
+    const blockedTasks = appData.tasks.filter(task => 
+        task.status && task.status.toLowerCase().includes('blocked') ||
+        task.blockers && task.blockers.trim() !== ''
+    ).length;
+    
+    const delayedTasks = appData.tasks.filter(task => 
+        task.status && task.status.toLowerCase().includes('delayed')
+    ).length;
+    
+    const riskLevel = blockedTasks > 2 || delayedTasks > 1 ? 'High' : 
+                     blockedTasks > 0 || delayedTasks > 0 ? 'Medium' : 'Low';
+    
+    const riskValue = document.getElementById('risk-indicator-value');
+    const riskSubtitle = document.getElementById('risk-indicator-subtitle');
+    if (riskValue) riskValue.textContent = riskLevel;
+    if (riskSubtitle) riskSubtitle.textContent = `${blockedTasks} blocked, ${delayedTasks} delayed tasks`;
+    
+    // Update risk indicator color
+    const riskCard = document.querySelector('.risk-indicator');
+    if (riskCard) {
+        riskCard.classList.remove('risk-low', 'risk-medium', 'risk-high');
+        riskCard.classList.add(`risk-${riskLevel.toLowerCase()}`);
+    }
+    
+    // Render status breakdown
+    renderStatusBreakdown();
+    
+    // Update burndown chart (simplified version)
+    updateBurndownChart(progressPercent);
+}
+
+function renderStatusBreakdown() {
+    const statusBars = document.getElementById('status-bars');
+    if (!statusBars || !appData.tasks) return;
+    
+    // Count tasks by status
+    const statusCounts = {};
+    const totalTasks = appData.tasks.length;
+    
+    appData.tasks.forEach(task => {
+        const status = task.completed ? 'Completed' : (task.status || 'Not Started');
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+    
+    // Define status colors
+    const statusColors = {
+        'Completed': '#10b981',
+        'In Progress': '#f59e0b', 
+        'Review': '#06b6d4',
+        'Pending': '#6b7280',
+        'Blocked': '#ef4444',
+        'Delayed': '#f97316',
+        'Not Started': '#94a3b8'
+    };
+    
+    // Generate status bars HTML
+    const statusItems = Object.entries(statusCounts)
+        .sort(([,a], [,b]) => b - a)
+        .map(([status, count]) => {
+            const percentage = totalTasks > 0 ? Math.round((count / totalTasks) * 100) : 0;
+            const color = statusColors[status] || '#94a3b8';
+            
+            return `
+                <div class="status-bar-item">
+                    <div class="status-bar-label">${status}</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar-fill" style="width: ${percentage}%; background-color: ${color};"></div>
+                    </div>
+                    <div class="status-bar-count">${count}</div>
+                </div>
+            `;
+        }).join('');
+    
+    statusBars.innerHTML = statusItems;
+}
+
+function updateBurndownChart(progressPercent) {
+    const burndownLine = document.querySelector('.burndown-line');
+    if (burndownLine) {
+        // Simulate burndown progress (in real app, this would be calculated from actual data)
+        const remainingWork = 100 - progressPercent;
+        burndownLine.style.width = `${remainingWork}%`;
+    }
+}
+
+// =============================================
+// KEYBOARD NAVIGATION
+// =============================================
+
+let currentFocusIndex = -1;
+let focusableElements = [];
+
+function initializeKeyboardNavigation() {
+    // Make main sections focusable
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
+        section.setAttribute('tabindex', '0');
+    });
+    
+    // Add keyboard event listeners
+    document.addEventListener('keydown', handleKeyboardNavigation);
+    
+    // Initialize focusable elements
+    updateFocusableElements();
+}
+
+function updateFocusableElements() {
+    focusableElements = Array.from(document.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), .section, .task-card, .gantt-row'
+    )).filter(el => {
+        return el.offsetWidth > 0 && el.offsetHeight > 0 && 
+               window.getComputedStyle(el).visibility !== 'hidden';
+    });
+}
+
+function handleKeyboardNavigation(e) {
+    const activeElement = document.activeElement;
+    
+    // Handle different key combinations
+    switch(e.key) {
+        case 'ArrowDown':
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                navigateToNextSection();
+            } else if (activeElement.closest('.gantt-chart')) {
+                e.preventDefault();
+                navigateGanttDown();
+            }
+            break;
+            
+        case 'ArrowUp':
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                navigateToPreviousSection();
+            } else if (activeElement.closest('.gantt-chart')) {
+                e.preventDefault();
+                navigateGanttUp();
+            }
+            break;
+            
+        case 'ArrowLeft':
+        case 'ArrowRight':
+            if (activeElement.closest('.gantt-chart')) {
+                e.preventDefault();
+                navigateGanttHorizontal(e.key === 'ArrowRight');
+            }
+            break;
+            
+        case 'Enter':
+        case ' ':
+            if (activeElement.classList.contains('task-card') || 
+                activeElement.classList.contains('gantt-row')) {
+                e.preventDefault();
+                toggleTaskDetails(activeElement);
+            }
+            break;
+            
+        case 'Escape':
+            closeModalsAndMenus();
+            break;
+            
+        case '/':
+            if (!e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                focusSearchInput();
+            }
+            break;
+    }
+}
+
+function navigateToNextSection() {
+    const sections = Array.from(document.querySelectorAll('.section'));
+    const currentSection = document.activeElement.closest('.section');
+    const currentIndex = currentSection ? sections.indexOf(currentSection) : -1;
+    const nextIndex = (currentIndex + 1) % sections.length;
+    
+    sections[nextIndex].focus();
+    sections[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function navigateToPreviousSection() {
+    const sections = Array.from(document.querySelectorAll('.section'));
+    const currentSection = document.activeElement.closest('.section');
+    const currentIndex = currentSection ? sections.indexOf(currentSection) : sections.length - 1;
+    const prevIndex = currentIndex <= 0 ? sections.length - 1 : currentIndex - 1;
+    
+    sections[prevIndex].focus();
+    sections[prevIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function navigateGanttDown() {
+    const ganttRows = Array.from(document.querySelectorAll('.gantt-row'));
+    const currentRow = document.activeElement.closest('.gantt-row');
+    
+    if (!currentRow && ganttRows.length > 0) {
+        ganttRows[0].focus();
+        return;
+    }
+    
+    const currentIndex = ganttRows.indexOf(currentRow);
+    if (currentIndex < ganttRows.length - 1) {
+        ganttRows[currentIndex + 1].focus();
+        ganttRows[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function navigateGanttUp() {
+    const ganttRows = Array.from(document.querySelectorAll('.gantt-row'));
+    const currentRow = document.activeElement.closest('.gantt-row');
+    
+    if (!currentRow) return;
+    
+    const currentIndex = ganttRows.indexOf(currentRow);
+    if (currentIndex > 0) {
+        ganttRows[currentIndex - 1].focus();
+        ganttRows[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function navigateGanttHorizontal(goRight) {
+    const currentRow = document.activeElement.closest('.gantt-row');
+    if (!currentRow) return;
+    
+    const cells = Array.from(currentRow.querySelectorAll('.gantt-cell'));
+    const currentCell = document.activeElement.closest('.gantt-cell');
+    
+    if (!currentCell && cells.length > 0) {
+        cells[0].focus();
+        return;
+    }
+    
+    const currentIndex = cells.indexOf(currentCell);
+    const nextIndex = goRight ? 
+        Math.min(currentIndex + 1, cells.length - 1) : 
+        Math.max(currentIndex - 1, 0);
+    
+    if (nextIndex !== currentIndex) {
+        cells[nextIndex].focus();
+        cells[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+}
+
+function toggleTaskDetails(element) {
+    // Toggle expanded details for task
+    element.classList.toggle('expanded');
+    
+    // In a real implementation, this would show/hide additional task details
+    const details = element.querySelector('.task-details');
+    if (details) {
+        details.style.display = details.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+function closeModalsAndMenus() {
+    // Close any open modals, dropdowns, etc.
+    const expandedElements = document.querySelectorAll('.expanded, .open');
+    expandedElements.forEach(el => {
+        el.classList.remove('expanded', 'open');
+    });
+}
+
+function focusSearchInput() {
+    const searchInput = document.querySelector('[data-filter="search"]');
+    if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+    }
+}
+
+// =============================================
+// VIRTUAL SCROLLING FOR GANTT CHART
+// =============================================
+
+let virtualScrollState = {
+    totalRows: 0,
+    visibleRows: 20,
+    rowHeight: 50,
+    scrollTop: 0,
+    container: null,
+    viewport: null
+};
+
+function initializeVirtualScrolling() {
+    const ganttContainer = document.querySelector('.gantt-container');
+    if (!ganttContainer) return;
+    
+    // Create virtual scrolling container
+    const virtualContainer = document.createElement('div');
+    virtualContainer.className = 'gantt-virtual-container';
+    
+    const viewport = document.createElement('div');
+    viewport.className = 'gantt-viewport';
+    
+    const content = document.createElement('div');
+    content.className = 'gantt-virtual-content';
+    
+    viewport.appendChild(content);
+    virtualContainer.appendChild(viewport);
+    
+    // Replace existing gantt chart with virtual container
+    const existingChart = ganttContainer.querySelector('.gantt-chart');
+    if (existingChart) {
+        ganttContainer.innerHTML = '';
+        ganttContainer.appendChild(virtualContainer);
+    }
+    
+    virtualScrollState.container = virtualContainer;
+    virtualScrollState.viewport = viewport;
+    
+    // Add scroll event listener
+    viewport.addEventListener('scroll', handleVirtualScroll);
+    
+    // Set initial dimensions
+    updateVirtualScrollDimensions();
+}
+
+function updateVirtualScrollDimensions() {
+    if (!virtualScrollState.container || !appData.tasks) return;
+    
+    const { container, viewport } = virtualScrollState;
+    const totalRows = appData.tasks.length;
+    const rowHeight = 50; // Approximate row height
+    
+    virtualScrollState.totalRows = totalRows;
+    virtualScrollState.rowHeight = rowHeight;
+    
+    // Set container height to show only visible rows
+    const visibleHeight = Math.min(totalRows, virtualScrollState.visibleRows) * rowHeight;
+    container.style.height = `${visibleHeight}px`;
+    
+    // Set content height to total height
+    const content = container.querySelector('.gantt-virtual-content');
+    if (content) {
+        content.style.height = `${totalRows * rowHeight}px`;
+    }
+    
+    // Initial render
+    renderVisibleRows(0);
+}
+
+function handleVirtualScroll(e) {
+    const scrollTop = e.target.scrollTop;
+    virtualScrollState.scrollTop = scrollTop;
+    
+    const startRow = Math.floor(scrollTop / virtualScrollState.rowHeight);
+    renderVisibleRows(startRow);
+}
+
+function renderVisibleRows(startRow) {
+    if (!appData.tasks || !virtualScrollState.viewport) return;
+    
+    const endRow = Math.min(
+        startRow + virtualScrollState.visibleRows, 
+        appData.tasks.length
+    );
+    
+    const visibleTasks = appData.tasks.slice(startRow, endRow);
+    
+    // Create partial Gantt chart for visible tasks
+    const content = virtualScrollState.viewport.querySelector('.gantt-virtual-content');
+    if (!content) return;
+    
+    // Calculate date range (reuse existing logic)
+    const dates = generateDateRange(appData.project.startDate, appData.project.endDate);
+    const dateCount = dates.length;
+    
+    // Generate HTML for visible rows only
+    const visibleRowsHtml = visibleTasks.map((task, index) => {
+        const actualIndex = startRow + index;
+        // Reuse existing row rendering logic but for specific task
+        return generateGanttRowHtml(task, dates, dateCount, actualIndex);
+    }).join('');
+    
+    // Update content transform to show correct position
+    const offsetY = startRow * virtualScrollState.rowHeight;
+    content.style.transform = `translateY(${offsetY}px)`;
+    content.innerHTML = visibleRowsHtml;
+}
+
+function generateGanttRowHtml(task, dates, dateCount, rowIndex) {
+    // Simplified version of the existing row generation logic
+    const member = getTeamMember(task.owner);
+    const ownerName = task.owner === 'both' ? 'Both' : (member ? member.name : task.owner);
+    
+    let startDateFormatted = 'No date';
+    let endDateFormatted = '';
+    let dateInfo = 'Status: ' + (task.status || 'Not Started');
+    
+    if (task.startDate && task.endDate) {
+        startDateFormatted = formatDate(task.startDate);
+        endDateFormatted = formatDate(task.endDate);
+        dateInfo = startDateFormatted === endDateFormatted ? startDateFormatted : `${startDateFormatted} - ${endDateFormatted}`;
+    }
+    
+    // Get status and priority styling
+    const statusInfo = getStatusInfo(task.status, task.completed);
+    const priorityInfo = getPriorityInfo(task.priority);
+    
+    let rowHtml = `<div class="gantt-row ${statusInfo.class} ${priorityInfo.class}" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));" tabindex="0" data-row-index="${rowIndex}">
+        <div class="gantt-task-name">
+            <span class="gantt-task-title">${escapeHtml(task.name)}</span>
+            <span class="gantt-task-owner">${escapeHtml(ownerName)} • ${dateInfo}</span>
+        </div>`;
+    
+    // Add cells (simplified for virtual scrolling)
+    dates.forEach(date => {
+        const isWE = isWeekend(date);
+        const isHol = isHoliday(date);
+        const isToday = date === new Date().toISOString().split('T')[0];
+        const cellClasses = ['gantt-cell'];
+        if (isWE || isHol) cellClasses.push('weekend');
+        if (isToday) cellClasses.push('today');
+        
+        rowHtml += `<div class="${cellClasses.join(' ')}"></div>`;
+    });
+    
+    rowHtml += '</div>';
+    return rowHtml;
+}
+
+// =============================================
+// MOBILE OPTIMIZATIONS
+// =============================================
+
+function initializeMobileOptimizations() {
+    // Detect touch device
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    if (isTouchDevice) {
+        // Show zoom controls on mobile
+        const zoomControls = document.querySelector('.zoom-controls');
+        if (zoomControls) {
+            zoomControls.style.display = 'flex';
+        }
+        
+        // Add zoom button event listeners
+        const zoomInBtn = document.querySelector('.zoom-in');
+        const zoomOutBtn = document.querySelector('.zoom-out');
+        const zoomResetBtn = document.querySelector('.zoom-reset');
+        
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => handleZoom(1.2));
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => handleZoom(0.8));
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => handleZoom(1));
+        
+        // Add touch-specific event listeners
+        initializeTouchGestures();
+        
+        // Optimize for mobile performance
+        optimizeMobilePerformance();
+    }
+}
+
+function initializeTouchGestures() {
+    const ganttContainer = document.querySelector('.gantt-container');
+    if (!ganttContainer) return;
+    
+    let startX, startY, isScrolling = false;
+    
+    // Touch start
+    ganttContainer.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isScrolling = false;
+    }, { passive: true });
+    
+    // Touch move
+    ganttContainer.addEventListener('touchmove', (e) => {
+        if (!startX || !startY) return;
+        
+        const deltaX = Math.abs(e.touches[0].clientX - startX);
+        const deltaY = Math.abs(e.touches[0].clientY - startY);
+        
+        // Determine if scrolling horizontally or vertically
+        if (deltaX > deltaY && deltaX > 10) {
+            isScrolling = true;
+            // Horizontal scroll for timeline
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Pinch to zoom (simplified)
+    let initialDistance = 0;
+    ganttContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            initialDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+        }
+    }, { passive: true });
+    
+    ganttContainer.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const currentDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            
+            const scale = currentDistance / initialDistance;
+            if (scale > 1.2) {
+                // Zoom in
+                handleZoom(1.2);
+            } else if (scale < 0.8) {
+                // Zoom out
+                handleZoom(0.8);
+            }
+        }
+    }, { passive: true });
+}
+
+function handleZoom(scale) {
+    const ganttContainer = document.querySelector('.gantt-container');
+    if (!ganttContainer) return;
+    
+    // Handle reset case
+    if (scale === 1) {
+        ganttContainer.dataset.zoom = '1';
+        ganttContainer.style.fontSize = '100%';
+        
+        // Reset cell widths
+        const cells = ganttContainer.querySelectorAll('.gantt-cell');
+        cells.forEach(cell => {
+            cell.style.minWidth = '';
+        });
+        return;
+    }
+    
+    // Handle zoom in/out
+    const currentZoom = parseFloat(ganttContainer.dataset.zoom || '1');
+    const newZoom = Math.max(0.5, Math.min(2, currentZoom * scale));
+    
+    ganttContainer.dataset.zoom = newZoom;
+    ganttContainer.style.fontSize = `${newZoom * 100}%`;
+    
+    // Adjust cell widths
+    const cells = ganttContainer.querySelectorAll('.gantt-cell');
+    cells.forEach(cell => {
+        const baseWidth = 30; // Base cell width
+        cell.style.minWidth = `${baseWidth * newZoom}px`;
+    });
+}
+
+function optimizeMobilePerformance() {
+    // Reduce animations on mobile for better performance
+    const style = document.createElement('style');
+    style.textContent = `
+        @media (max-width: 768px) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Use passive listeners where possible
+    const options = { passive: true, capture: false };
+    
+    // Add intersection observer for lazy loading
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Load content when visible
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { rootMargin: '50px' });
+        
+        // Observe sections
+        document.querySelectorAll('.section').forEach(section => {
+            observer.observe(section);
+        });
     }
 }
 

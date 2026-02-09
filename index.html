@@ -21,6 +21,60 @@
 
         <!-- Main Content -->
         <main class="content" role="main">
+            <!-- Executive Dashboard Section -->
+            <section class="section dashboard-section" aria-labelledby="dashboard-heading">
+                <div class="section-header">
+                    <div class="section-icon icon-dashboard" aria-hidden="true">📊</div>
+                    <h2 id="dashboard-heading">Executive Dashboard</h2>
+                </div>
+                <div class="dashboard-grid" role="region" aria-label="Executive dashboard with key metrics">
+                    <div class="metric-card sprint-progress" role="article" aria-labelledby="sprint-progress-title">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-content">
+                            <h3 id="sprint-progress-title">Sprint Progress</h3>
+                            <div class="metric-value" id="sprint-progress-value">0%</div>
+                            <div class="metric-subtitle" id="sprint-progress-subtitle">0 of 0 tasks completed</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card team-utilization" role="article" aria-labelledby="team-utilization-title">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-content">
+                            <h3 id="team-utilization-title">Team Utilization</h3>
+                            <div class="metric-value" id="team-utilization-value">0%</div>
+                            <div class="metric-subtitle" id="team-utilization-subtitle">Average capacity used</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card risk-indicator" role="article" aria-labelledby="risk-indicator-title">
+                        <div class="metric-icon">⚠️</div>
+                        <div class="metric-content">
+                            <h3 id="risk-indicator-title">Risk Level</h3>
+                            <div class="metric-value" id="risk-indicator-value">Low</div>
+                            <div class="metric-subtitle" id="risk-indicator-subtitle">Based on blockers & delays</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card burndown-chart" role="article" aria-labelledby="burndown-title">
+                        <div class="metric-icon">📈</div>
+                        <div class="metric-content">
+                            <h3 id="burndown-title">Burndown Status</h3>
+                            <div class="burndown-mini" id="burndown-mini">
+                                <div class="burndown-line"></div>
+                                <div class="burndown-ideal"></div>
+                            </div>
+                            <div class="metric-subtitle" id="burndown-subtitle">Sprint velocity tracking</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-breakdown" role="region" aria-label="Task status breakdown">
+                    <h3>Task Status Distribution</h3>
+                    <div class="status-bars" id="status-bars">
+                        <!-- Dynamic status bars -->
+                    </div>
+                </div>
+            </section>
             <!-- Team Overview Section -->
             <section class="section" aria-labelledby="team-overview-heading">
                 <div class="section-header">
@@ -81,6 +135,13 @@
                     </table>
                 </div>
             </section>
+
+            <!-- Mobile Zoom Controls -->
+            <div class="zoom-controls" style="display: none;">
+                <button class="zoom-btn zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+                <button class="zoom-btn zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+                <button class="zoom-btn zoom-reset" aria-label="Reset zoom" title="Reset zoom">⭯</button>
+            </div>
 
             <!-- Milestones Section -->
             <section class="section" aria-labelledby="milestones-heading">
