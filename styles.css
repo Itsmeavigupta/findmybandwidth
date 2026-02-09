@@ -355,6 +355,7 @@ tbody tr:last-child td {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: var(--gray-200);
+    min-width: 220px;
 }
 
 .gantt-header-day {
@@ -404,6 +405,7 @@ tbody tr:last-child td {
     flex-direction: column;
     gap: 4px;
     background: white;
+    min-width: 220px;
 }
 
 .gantt-row:hover .gantt-task-name {
@@ -795,6 +797,7 @@ tbody tr:last-child td {
         left: 0;
         background: var(--gray-200);
         z-index: 20;
+        min-width: 180px;
     }
 
     .gantt-header-day {
@@ -813,6 +816,7 @@ tbody tr:last-child td {
         left: 0;
         background: white;
         z-index: 10;
+        min-width: 180px;
     }
 
     .gantt-row:hover .gantt-task-name {

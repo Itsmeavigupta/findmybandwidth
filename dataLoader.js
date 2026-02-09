@@ -368,7 +368,7 @@ function normalizeTasks(rawData) {
             notes: sanitizeText(row.notes || row.Notes || ''),
             completed
         };
-    }).filter(task => task.name && task.startDate && task.endDate && isValidDateRange(task.startDate, task.endDate));
+    }).filter(task => task.name && isValidDateRange(task.startDate, task.endDate));
 }
 
 /**
@@ -405,7 +405,9 @@ function sanitizeUrl(url) {
 }
 
 function isValidDateRange(startDate, endDate) {
-    if (!startDate || !endDate) return false;
+    // Allow tasks without dates (they'll show as status-only in timeline)
+    if (!startDate || !endDate) return true;
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
     return start <= end;

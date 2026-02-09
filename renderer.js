@@ -214,9 +214,17 @@ function renderGanttChart() {
     filteredTasks.forEach(task => {
         const member = getTeamMember(task.owner);
         const ownerName = task.owner === 'both' ? 'Both' : (member ? member.name : task.owner);
-        const startDateFormatted = formatDate(task.startDate);
-        const endDateFormatted = formatDate(task.endDate);
-        const dateInfo = startDateFormatted === endDateFormatted ? startDateFormatted : `${startDateFormatted} - ${endDateFormatted}`;
+        
+        // Handle tasks without dates - show status in timeline
+        let startDateFormatted = 'No date';
+        let endDateFormatted = '';
+        let dateInfo = 'Status: ' + (task.status || 'Not Started');
+        
+        if (task.startDate && task.endDate) {
+            startDateFormatted = formatDate(task.startDate);
+            endDateFormatted = formatDate(task.endDate);
+            dateInfo = startDateFormatted === endDateFormatted ? startDateFormatted : `${startDateFormatted} - ${endDateFormatted}`;
+        }
         
         ganttParts.push(`<div class="gantt-row" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
             <div class="gantt-task-name">
@@ -224,38 +232,107 @@ function renderGanttChart() {
                 <span class="gantt-task-owner">${escapeHtml(ownerName)} • ${dateInfo}</span>
             </div>`);
         
-        // Create cells for each date
-        let taskStartIndex = dates.indexOf(task.startDate);
-        let taskEndIndex = dates.indexOf(task.endDate);
-        
-        dates.forEach((date, index) => {
-            const isWE = isWeekend(date);
-            const isHol = isHoliday(date);
-            const isToday = date === today;
-            const cellClasses = ['gantt-cell'];
-            if (isWE || isHol) cellClasses.push('weekend');
-            if (isToday) cellClasses.push('today');
+        // Handle tasks with and without dates
+        if (!task.startDate || !task.endDate) {
+            // Task without dates - show status indicator across entire timeline
+            const statusClass = task.completed ? 'bar-success' : 
+                              task.status.toLowerCase().includes('progress') ? 'bar-warning' :
+                              task.status.toLowerCase().includes('pending') ? 'bar-pending' : 'bar-info';
+            const statusLabel = task.completed ? '✓' : task.status.charAt(0).toUpperCase();
             
-            ganttParts.push(`<div class="${cellClasses.join(' ')}">`);
-            
-            // Render task bar on start date cell
-            if (index === taskStartIndex && taskEndIndex >= taskStartIndex) {
-                const duration = taskEndIndex - taskStartIndex + 1;
-                const barClass = task.priority === 'urgent' ? 'bar-urgent' : 
-                               task.priority === 'pending' ? 'bar-pending' :
-                               member ? `bar-${member.colorClass}` : 'bar-primary';
+            dates.forEach((date, index) => {
+                const isWE = isWeekend(date);
+                const isHol = isHoliday(date);
+                const isToday = date === today;
+                const cellClasses = ['gantt-cell'];
+                if (isWE || isHol) cellClasses.push('weekend');
+                if (isToday) cellClasses.push('today');
                 
-                const workingDays = getWorkingDays(task.startDate, task.endDate);
-                const barWidth = `calc(${duration * 100}% - 4px)`;
-                const barLabel = workingDays > 0 ? `${workingDays}d` : '1d';
+                ganttParts.push(`<div class="${cellClasses.join(' ')}">`);
                 
-                ganttParts.push(`<div class="gantt-bar ${barClass}" style="left: 2px; width: ${barWidth};" title="${escapeHtml(task.name)}: ${dateInfo} (${workingDays} working days)" role="img" aria-label="Task duration: ${workingDays} working days">
-                    <span class="gantt-bar-label">${barLabel}</span>
-                </div>`);
-            }
+                // Show status indicator on the first cell only
+                if (index === 0) {
+                    ganttParts.push(`<div class="gantt-bar ${statusClass}" style="left: 2px; width: calc(100% - 4px);" title="${escapeHtml(task.name)}: ${task.status}" role="img" aria-label="Task status: ${task.status}">
+                        <span class="gantt-bar-label">${statusLabel}</span>
+                    </div>`);
+                }
+                
+                ganttParts.push('</div>');
+            });
+        } else {
+            // Task with dates - show timeline bar
+            // Handle tasks that start before the sprint timeline
+            const taskStartDate = new Date(task.startDate);
+            const taskEndDate = new Date(task.endDate);
+            const sprintStartDate = new Date(appData.project.startDate);
+            const sprintEndDate = new Date(appData.project.endDate);
             
-            ganttParts.push('</div>');
-        });
+            // Find the visible range for this task within the sprint timeline
+            const visibleStartDate = taskStartDate < sprintStartDate ? sprintStartDate : taskStartDate;
+            const visibleEndDate = taskEndDate > sprintEndDate ? sprintEndDate : taskEndDate;
+            
+            const visibleStartIndex = dates.findIndex(d => d === visibleStartDate.toISOString().split('T')[0]);
+            const visibleEndIndex = dates.findIndex(d => d === visibleEndDate.toISOString().split('T')[0]);
+            
+            // Calculate the actual task duration for display
+            const actualStartIndex = dates.indexOf(task.startDate) !== -1 ? dates.indexOf(task.startDate) : 
+                                   (taskStartDate < sprintStartDate ? 0 : -1);
+            const actualEndIndex = dates.indexOf(task.endDate) !== -1 ? dates.indexOf(task.endDate) : 
+                                 (taskEndDate > sprintEndDate ? dateCount - 1 : -1);
+            
+            dates.forEach((date, index) => {
+                const isWE = isWeekend(date);
+                const isHol = isHoliday(date);
+                const isToday = date === today;
+                const cellClasses = ['gantt-cell'];
+                if (isWE || isHol) cellClasses.push('weekend');
+                if (isToday) cellClasses.push('today');
+                
+                ganttParts.push(`<div class="${cellClasses.join(' ')}">`);
+                
+                // Render task bar if this date is within the visible task range
+                if (index >= visibleStartIndex && index <= visibleEndIndex && visibleStartIndex !== -1 && visibleEndIndex !== -1) {
+                    const barClass = task.priority === 'urgent' ? 'bar-urgent' : 
+                                   task.priority === 'pending' ? 'bar-pending' :
+                                   member ? `bar-${member.colorClass}` : 'bar-primary';
+                    
+                    // Calculate bar width - if task extends beyond visible range, show partial bar
+                    let barWidth;
+                    let barPosition = '2px';
+                    
+                    if (actualStartIndex < visibleStartIndex && index === visibleStartIndex) {
+                        // Task starts before visible range - show partial bar from start
+                        barWidth = 'calc(100% - 4px)';
+                    } else if (actualEndIndex > visibleEndIndex && index === visibleEndIndex) {
+                        // Task ends after visible range - show partial bar to end
+                        barWidth = 'calc(100% - 4px)';
+                    } else if (index === visibleStartIndex && visibleStartIndex === visibleEndIndex) {
+                        // Single day task
+                        barWidth = 'calc(100% - 4px)';
+                    } else if (index === visibleStartIndex) {
+                        // First day of multi-day task
+                        const remainingDays = visibleEndIndex - visibleStartIndex + 1;
+                        barWidth = `calc(${remainingDays * 100}% - 4px)`;
+                    } else {
+                        // Continuation of multi-day task - don't show bar
+                        barWidth = null;
+                    }
+                    
+                    if (barWidth && index === visibleStartIndex) {
+                        const workingDays = getWorkingDays(task.startDate, task.endDate);
+                        const barLabel = workingDays > 0 ? `${workingDays}d` : '1d';
+                        const isOverflowing = (actualStartIndex < 0 || actualEndIndex >= dateCount) ? 
+                                            ' (continues beyond timeline)' : '';
+                        
+                        ganttParts.push(`<div class="gantt-bar ${barClass}" style="left: ${barPosition}; width: ${barWidth};" title="${escapeHtml(task.name)}: ${dateInfo} (${workingDays} working days)${isOverflowing}" role="img" aria-label="Task duration: ${workingDays} working days${isOverflowing}">
+                            <span class="gantt-bar-label">${barLabel}</span>
+                        </div>`);
+                    }
+                }
+                
+                ganttParts.push('</div>');
+            });
+        }
         
         ganttParts.push('</div>');
     });
