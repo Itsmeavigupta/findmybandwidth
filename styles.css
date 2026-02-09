@@ -87,6 +87,188 @@ body {
 }
 
 /* =============================================
+   DESKTOP COMING SOON BANNER
+   ============================================= */
+.desktop-coming-soon {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    .desktop-coming-soon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #0f0f0f;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .desktop-coming-soon::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    
+    .cs-container {
+        position: relative;
+        z-index: 1;
+        max-width: 500px;
+        padding: 0 24px;
+    }
+    
+    .cs-content {
+        text-align: left;
+        animation: slideIn 0.6s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .cs-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .cs-heading {
+        font-size: 3rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 12px;
+        letter-spacing: -1px;
+        line-height: 1.1;
+    }
+    
+    .cs-subheading {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 32px;
+        line-height: 1.6;
+    }
+    
+    .cs-divider {
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        margin-bottom: 28px;
+        border-radius: 2px;
+    }
+    
+    .cs-features {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 32px;
+    }
+    
+    .cs-feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .cs-feature-icon {
+        color: #10b981;
+        font-weight: 700;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .cs-feature-text {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.75);
+        line-height: 1.5;
+    }
+    
+    .cs-notice {
+        display: flex;
+        gap: 16px;
+        padding: 20px;
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.25);
+        border-radius: 8px;
+        margin-bottom: 32px;
+    }
+    
+    .cs-notice-icon {
+        width: 24px;
+        height: 24px;
+        color: #667eea;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    
+    .cs-notice-text {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.6;
+        margin: 0;
+    }
+    
+    .cs-notice-text strong {
+        color: white;
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    .cs-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .cs-author {
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 500;
+    }
+    
+    .cs-toggle {
+        background: none;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.7);
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .cs-toggle:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.4);
+        color: white;
+        transform: translateX(2px);
+    }
+}
+
+/* =============================================
    TOAST NOTIFICATIONS
    ============================================= */
 .toast-container {
@@ -1251,6 +1433,7 @@ tbody tr:last-child td {
     border-top: 1px solid var(--border);
     padding: 8px 4px;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    animation: navSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
     z-index: 1000;
     display: none; /* Hidden by default on desktop */
     justify-content: space-around;
@@ -2829,6 +3012,18 @@ tbody tr:last-child td {
         padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
         z-index: 1001;
         box-shadow: 0 2px 12px rgba(102, 126, 234, 0.25);
+        animation: bannerSlideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes bannerSlideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
     }
     
     .banner-content {
@@ -2836,6 +3031,18 @@ tbody tr:last-child td {
         align-items: center;
         justify-content: center;
         gap: 8px;
+        animation: bannerContentFade 0.5s ease 0.1s both;
+    }
+    
+    @keyframes bannerContentFade {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
     
     .banner-text {
@@ -2844,6 +3051,12 @@ tbody tr:last-child td {
         color: white;
         letter-spacing: 0.3px;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        animation: textGlow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes textGlow {
+        from { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+        to { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 8px rgba(255, 255, 255, 0.3); }
     }
     
     .banner-emoji {
@@ -2870,6 +3083,18 @@ tbody tr:last-child td {
         justify-content: space-between;
         z-index: 1000;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        animation: headerSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+    }
+    
+    @keyframes headerSlideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
     }
     
     .hamburger-menu {
@@ -2937,6 +3162,18 @@ tbody tr:last-child td {
         overflow-x: hidden;
         overscroll-behavior: contain;
         touch-action: pan-y;
+        animation: contentFadeIn 0.2s ease 0.2s both;
+    }
+    
+    @keyframes cardSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
     
     /* Mobile Navigation - Consolidated */
@@ -3025,7 +3262,15 @@ tbody tr:last-child td {
         box-shadow: var(--shadow-sm);
         border: 1px solid var(--border);
         overflow: visible;
+        animation: cardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
+    
+    .mobile-card:nth-child(1) { animation-delay: 0.4s; }
+    .mobile-card:nth-child(2) { animation-delay: 0.45s; }
+    .mobile-card:nth-child(3) { animation-delay: 0.5s; }
+    .mobile-card:nth-child(4) { animation-delay: 0.55s; }
+    .mobile-card:nth-child(5) { animation-delay: 0.6s; }
+    .mobile-card:nth-child(n+6) { animation-delay: 0.65s; }
     
     .card-header {
         display: flex;

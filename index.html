@@ -8,7 +8,51 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container desktop-only">
+    <!-- Desktop Coming Soon Banner -->
+    <div class="desktop-coming-soon desktop-only" id="desktop-coming-soon">
+        <div class="cs-container">
+            <div class="cs-content">
+                <div class="cs-badge">📱 Available Now on Mobile</div>
+                <h1 class="cs-heading">FindMyBandwidth</h1>
+                <p class="cs-subheading">Sprint planning & team bandwidth management made simple</p>
+                <div class="cs-divider"></div>
+                <div class="cs-features">
+                    <div class="cs-feature">
+                        <span class="cs-feature-icon">✓</span>
+                        <span class="cs-feature-text">Track team capacity in real-time</span>
+                    </div>
+                    <div class="cs-feature">
+                        <span class="cs-feature-icon">✓</span>
+                        <span class="cs-feature-text">Visualize sprint timelines & tasks</span>
+                    </div>
+                    <div class="cs-feature">
+                        <span class="cs-feature-icon">✓</span>
+                        <span class="cs-feature-text">Monitor milestones & blockers</span>
+                    </div>
+                    <div class="cs-feature">
+                        <span class="cs-feature-icon">📊</span>
+                        <span class="cs-feature-text">Real-time data from Google Sheets</span>
+                    </div>
+                </div>
+                <div class="cs-notice">
+                    <svg class="cs-notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                    <p class="cs-notice-text">
+                        <strong>Mobile-optimized experience ready!</strong><br>
+                        Open this URL on your mobile device for full access. Desktop version coming soon.
+                    </p>
+                </div>
+                <div class="cs-meta">
+                    <span class="cs-author">Built by Avi</span>
+                    <button class="cs-toggle" onclick="document.getElementById('desktop-coming-soon').style.display='none'; document.getElementById('desktop-content').style.display='block';" aria-label="Show desktop version">View Anyway →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container desktop-only" id="desktop-content" style="display: none;">
         <!-- Header -->
         <header class="header" role="banner">
             <div class="header-content">
