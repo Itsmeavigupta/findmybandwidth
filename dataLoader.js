@@ -118,19 +118,27 @@ async function loadFromGoogleSheets() {
  * Uses gviz/tq API endpoint - works on GitHub Pages without CORS proxy
  */
 async function fetchGoogleSheet(sheetName, gid) {
-    // Use gviz/tq endpoint with gid parameter — no auth needed for public sheets
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    // Cache-busting: append timestamp to prevent stale data
+    const cacheBuster = Date.now();
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&_=${cacheBuster}`;
     
     try {
-        console.log(`📥 Fetching ${sheetName}...`);
+        console.log(`📥 Fetching ${sheetName}... (cache-bust: ${cacheBuster})`);
         
         let response;
         let fetchMethod = 'direct';
         
+        // Use cache: 'no-store' to bypass browser cache
+        // Avoid custom headers that could trigger CORS preflight
+        const fetchOptions = {
+            method: 'GET',
+            cache: 'no-store'
+        };
+        
         // Strategy: Try direct fetch first (works from GitHub Pages & most hosted origins).
         // Only fall back to CORS proxies when direct fails (e.g. localhost development).
         try {
-            response = await fetch(csvUrl, { method: 'GET', cache: 'no-store' });
+            response = await fetch(csvUrl, fetchOptions);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             fetchMethod = 'direct';
         } catch (directError) {
@@ -147,7 +155,7 @@ async function fetchGoogleSheet(sheetName, gid) {
             for (const buildProxyUrl of proxies) {
                 try {
                     const proxyUrl = buildProxyUrl(csvUrl);
-                    response = await fetch(proxyUrl, { method: 'GET', cache: 'no-store' });
+                    response = await fetch(proxyUrl, fetchOptions);
                     if (response.ok) {
                         fetchMethod = 'proxy';
                         proxySuccess = true;
@@ -271,7 +279,7 @@ function normalizeSprintConfig(rawData) {
     const defaultEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
     
     return {
-        name: config.sprint_name || config.name || 'Untitled Sprint',
+        name: config.sprint_name,
         startDate: config.start_date || defaultStart,
         endDate: config.end_date || defaultEnd,
         preparedBy: config.prepared_by || config.preparedBy || 'Unknown'
@@ -280,6 +288,14 @@ function normalizeSprintConfig(rawData) {
 
 /**
  * Normalize MEMBERS data
+ * DATA CONTRACT: MEMBERS sheet should have:
+ *   - id (required): Unique identifier
+ *   - name (required): Display name
+ *   - role (optional): Job title, defaults to "Team Member"
+ *   - color_class (optional): primary|success|warning|info|danger
+ *   - capacity (optional): Capacity percentage string
+ *   - focus (optional): Current focus area
+ *   - bandwidth_hours (optional): Available hours per week (NUMBER), defaults to 40
  */
 function normalizeMembers(rawData) {
     if (!Array.isArray(rawData)) {
@@ -292,6 +308,12 @@ function normalizeMembers(rawData) {
         const name = sanitizeText(row.name || row.Name || row.NAME || `Member ${index + 1}`);
         const colorClass = sanitizeColorClass(row.color_class || row['color class'] || row.ColorClass || getDefaultColorClass(id));
         
+        // Parse bandwidth_hours as explicit number - NO INFERENCE
+        const bandwidthHours = parseNumericField(
+            row.bandwidth_hours || row['bandwidth hours'] || row.bandwidthHours,
+            40 // Default: 40 hours/week
+        );
+        
         return {
             id,
             name,
@@ -299,10 +321,20 @@ function normalizeMembers(rawData) {
             colorClass,
             capacity: sanitizeText(row.capacity || row.Capacity || '100%'),
             focus: sanitizeText(row.focus || row.Focus || 'Sprint work'),
-            bandwidthDesc: sanitizeText(row.bandwidth_desc || row['bandwidth desc'] || 'General tasks'),
-            effectiveBandwidth: sanitizeText(row.effective_bandwidth || row['effective bandwidth'] || '100% sprint')
+            bandwidthHours // EXPLICIT numeric field - no parsing from text
         };
     }).filter(member => member.id && member.name && member.id !== 'member-0');
+}
+
+/**
+ * Parse numeric field with default fallback
+ */
+function parseNumericField(value, defaultValue) {
+    if (value === null || value === undefined || value === '') {
+        return defaultValue;
+    }
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? defaultValue : parsed;
 }
 
 /**
@@ -335,6 +367,21 @@ function getDefaultColorClass(id) {
 
 /**
  * Normalize TASKS data
+ * DATA CONTRACT: TASKS sheet should have:
+ *   - id (required): Unique identifier
+ *   - name/title (required): Task name
+ *   - owner (required): Member ID who owns this task
+ *   - start_date (required): Task start date
+ *   - end_date (required): Task end date
+ *   - status (optional): in-progress|todo|completed|blocked|review|pending
+ *   - priority (optional): urgent|normal|low
+ *   - jira_id (optional): Jira ticket ID
+ *   - jira_url (optional): Link to Jira ticket
+ *   - estimated_hours (optional): Estimated hours (NUMBER), defaults to 8
+ *   - bu (optional): Business unit
+ *   - type (optional): Task type
+ *   - blockers (optional): Blocker description
+ *   - notes (optional): Additional notes
  */
 function normalizeTasks(rawData) {
     if (!Array.isArray(rawData)) {
@@ -352,32 +399,68 @@ function normalizeTasks(rawData) {
         const startDate = sanitizeDate(row.start_date || row['start date'] || row.StartDate);
         const endDate = sanitizeDate(row.end_date || row['end date'] || row.EndDate);
         
+        // Parse estimated_hours as explicit number - NO INFERENCE
+        const estimatedHours = parseNumericField(
+            row.estimated_hours || row['estimated hours'] || row.estimatedHours,
+            8 // Default: 8 hours per task
+        );
+        
         return {
             id,
             name: title,
-            jiraId: sanitizeText(row.jira || row.Jira || row.jira_id || ''),
+            jiraId: sanitizeText(row.jira || row.Jira || row.jira_id || row['jira id'] || ''),
             jiraUrl: sanitizeUrl(row.jira_url || row['jira url'] || row.jira_link || ''),
             owner,
             bu: sanitizeText(row.bu || row.BU || ''),
-            status: sanitizeText(row.status || row.Status || 'Not Started'),
+            status: sanitizeTaskStatus(row.status || row.Status || 'todo'),
             priority,
             startDate,
             endDate,
             type: sanitizeText(row.type || row.Type || ''),
             blockers: sanitizeText(row.blocker || row.blockers || row.Blocker || ''),
             notes: sanitizeText(row.notes || row.Notes || ''),
-            completed
+            completed,
+            estimatedHours // EXPLICIT numeric field
         };
     }).filter(task => task.name && isValidDateRange(task.startDate, task.endDate));
+}
+
+/**
+ * Sanitize task status to valid enum value
+ */
+function sanitizeTaskStatus(status) {
+    const validStatuses = ['in-progress', 'todo', 'completed', 'blocked', 'review', 'pending'];
+    const cleaned = String(status).toLowerCase().trim().replace(/\s+/g, '-');
+    // Map common variations
+    const statusMap = {
+        'not-started': 'todo',
+        'notstarted': 'todo',
+        'in progress': 'in-progress',
+        'inprogress': 'in-progress',
+        'done': 'completed',
+        'complete': 'completed',
+        'in-review': 'review',
+        'reviewing': 'review'
+    };
+    const mapped = statusMap[cleaned] || cleaned;
+    return validStatuses.includes(mapped) ? mapped : 'todo';
 }
 
 /**
  * Additional sanitization helpers
  */
 function sanitizePriority(priority) {
-    const valid = ['urgent', 'normal', 'pending'];
+    const valid = ['urgent', 'normal', 'low'];
     const cleaned = String(priority).toLowerCase().trim();
-    return valid.includes(cleaned) ? cleaned : 'normal';
+    // Map common variations
+    const priorityMap = {
+        'high': 'urgent',
+        'critical': 'urgent',
+        'medium': 'normal',
+        'pending': 'low'
+    };
+    const mapped = priorityMap[cleaned] || cleaned;
+    return valid.includes(mapped) ? mapped : 'normal';
 }
 
 function sanitizeBoolean(value) {
@@ -415,16 +498,53 @@ function isValidDateRange(startDate, endDate) {
 
 /**
  * Normalize MILESTONES data
+ * DATA CONTRACT: MILESTONES sheet should have:
+ *   - id (optional): Unique identifier, auto-generated if missing
+ *   - date (required): Milestone target date
+ *   - title (required): Milestone name
+ *   - assignee (optional): Person responsible
+ *   - status (optional): pending|in-progress|completed|blocked, defaults to 'pending'
+ *   - description (optional): Milestone description
+ *   - progress (optional): Completion percentage (NUMBER 0-100), defaults to 0
  */
 function normalizeMilestones(rawData) {
     return rawData.map((row, index) => {
+        const status = sanitizeMilestoneStatus(row.status || row.Status || 'pending');
+        const progress = Math.min(100, Math.max(0, parseNumericField(
+            row.progress || row.Progress,
+            status === 'completed' ? 100 : 0 // Default: 100 if completed, 0 otherwise
+        )));
+        
         return {
-            id: `milestone-${index}`,
-            date: (row.date || row.Date || '').trim(),
-            title: (row.title || row.Title || row.milestone || `Milestone ${index + 1}`).trim(),
-            assignee: (row.owner || row.Owner || row.assignee || row.Assignee || '').trim()
+            id: sanitizeId(row.id || row.Id || `milestone-${index}`),
+            date: sanitizeDate(row.date || row.Date || ''),
+            title: sanitizeText(row.title || row.Title || row.milestone || `Milestone ${index + 1}`),
+            assignee: sanitizeText(row.owner || row.Owner || row.assignee || row.Assignee || ''),
+            status, // EXPLICIT status field from sheet
+            description: sanitizeText(row.description || row.Description || ''),
+            progress // EXPLICIT progress field from sheet
         };
     }).filter(milestone => milestone.date && milestone.title);
+}
+
+/**
+ * Sanitize milestone status to valid enum value
+ */
+function sanitizeMilestoneStatus(status) {
+    const validStatuses = ['pending', 'in-progress', 'completed', 'blocked'];
+    const cleaned = String(status).toLowerCase().trim().replace(/\s+/g, '-');
+    // Map common variations
+    const statusMap = {
+        'not-started': 'pending',
+        'notstarted': 'pending',
+        'in progress': 'in-progress',
+        'inprogress': 'in-progress',
+        'done': 'completed',
+        'complete': 'completed',
+        'upcoming': 'pending'
+    };
+    const mapped = statusMap[cleaned] || cleaned;
+    return validStatuses.includes(mapped) ? mapped : 'pending';
 }
 
 /**
@@ -472,34 +592,80 @@ async function loadAllData() {
 }
 
 /**
- * Validate loaded data
+ * Validate loaded data against DATA_CONTRACT
+ * Surfaces user-visible errors via toast notifications for missing required fields
  */
 function validateData() {
     const errors = [];
+    const warnings = [];
     
+    // SPRINT_CONFIG validation
     if (!appData.project || !appData.project.name) {
-        errors.push('❌ Missing sprint_name in SPRINT_CONFIG sheet');
+        errors.push('Missing sprint_name in SPRINT_CONFIG sheet');
     }
-    
     if (!appData.project || !appData.project.startDate || !appData.project.endDate) {
-        errors.push('❌ Missing start_date or end_date in SPRINT_CONFIG sheet');
+        errors.push('Missing start_date or end_date in SPRINT_CONFIG sheet');
     }
     
+    // MEMBERS validation - check required fields per DATA_CONTRACT
     if (!appData.teamMembers || appData.teamMembers.length === 0) {
-        errors.push('❌ No team members found in MEMBERS sheet');
+        errors.push('No team members found in MEMBERS sheet');
+    } else {
+        appData.teamMembers.forEach((member, index) => {
+            if (!member.id) {
+                warnings.push(`Member #${index + 1} missing required field: id`);
+            }
+            if (!member.name) {
+                errors.push(`Member #${index + 1} missing required field: name`);
+            }
+        });
     }
     
+    // TASKS validation - check required fields per DATA_CONTRACT
     if (!appData.tasks || appData.tasks.length === 0) {
-        errors.push('❌ No tasks found in TASKS sheet');
+        warnings.push('No tasks found in TASKS sheet');
+    } else {
+        appData.tasks.forEach((task, index) => {
+            if (!task.id) {
+                warnings.push(`Task #${index + 1} missing required field: id`);
+            }
+            if (!task.name) {
+                errors.push(`Task #${index + 1} missing required field: name`);
+            }
+            if (!task.owner) {
+                warnings.push(`Task "${task.name || index + 1}" missing required field: owner`);
+            }
+            // start_date and end_date are already validated in normalizeTasks
+        });
     }
     
+    // MILESTONES validation - check required fields per DATA_CONTRACT
+    if (appData.milestones && appData.milestones.length > 0) {
+        appData.milestones.forEach((milestone, index) => {
+            if (!milestone.date) {
+                warnings.push(`Milestone "${milestone.title || index + 1}" missing required field: date`);
+            }
+            if (!milestone.title) {
+                warnings.push(`Milestone #${index + 1} missing required field: title`);
+            }
+        });
+    }
+    
+    // Surface warnings via toast (non-blocking)
+    if (warnings.length > 0 && typeof showToast === 'function') {
+        showToast(`Warning: ${warnings.length} data warning(s) detected. Check console for details.`, 'warning', 5000);
+        console.warn('Data validation warnings:\n• ' + warnings.join('\n• '));
+    }
+    
+    // Throw error for critical issues
     if (errors.length > 0) {
-        throw new Error('Data validation failed:\n' + errors.join('\n'));
+        throw new Error('Data validation failed:\n❌ ' + errors.join('\n❌ '));
     }
 }
 
 /**
  * Load fallback demo data
+ * Uses ONLY fields defined in DATA_CONTRACT - no inferred data
  */
 function loadFallbackData() {
     console.warn('⚠️ Using fallback demo data. Configure your Google Sheet!');
@@ -518,6 +684,7 @@ function loadFallbackData() {
     
     console.log('📅 Date range:', appData.project.startDate, 'to', appData.project.endDate);
     
+    // MEMBERS - using ONLY fields from DATA_CONTRACT
     appData.teamMembers = [
         {
             id: "avi",
@@ -526,8 +693,7 @@ function loadFallbackData() {
             colorClass: "primary",
             capacity: "100%",
             focus: "Setup Google Sheets",
-            bandwidthDesc: "Configure tracker",
-            effectiveBandwidth: "100% setup"
+            bandwidthHours: 40 // EXPLICIT field from DATA_CONTRACT
         }
     ];
     

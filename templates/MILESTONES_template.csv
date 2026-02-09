@@ -1,0 +1,8 @@
+id,date,title,assignee,status,progress,description
+milestone-1,2026-02-10,"Sprint Planning Complete",vinit,completed,100,"All tasks assigned and estimated"
+milestone-2,2026-02-16,"MOU & NFA Delivery",avi,in-progress,75,"Core functionality ready, pending final review"
+milestone-3,2026-02-20,"Authentication Module Live",anup,in-progress,60,"Backend complete, frontend integration ongoing"
+milestone-4,2026-02-25,"Beta Release - Mobile App",rahul,pending,20,"Design finalized, development in progress"
+milestone-5,2026-03-01,"Security Audit Complete",vinit,pending,0,"Scheduled for end of sprint"
+milestone-6,2026-03-05,"Payment Gateway Production Deploy",anup,pending,0,"Integration testing pending"
+milestone-7,2026-03-09,"Sprint Review & Retrospective",vinit,pending,0,"Demo to stakeholders + team retro"

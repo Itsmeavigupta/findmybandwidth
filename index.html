@@ -8,14 +8,55 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container desktop-only">
         <!-- Header -->
         <header class="header" role="banner">
-            <h1>📊 Sprint Roadmap & Bandwidth Report</h1>
-            <p>Task allocation and timeline overview</p>
-            <div class="meta-info" role="contentinfo">
-                <div class="meta-item" id="sprint-dates" aria-label="Sprint dates">📅 Loading...</div>
-                <div class="meta-item" id="prepared-by" aria-label="Prepared by">👤 Prepared by: Loading...</div>
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>Sprint Roadmap</h1>
+                    <div class="header-meta">
+                        <span id="sprint-status">Loading...</span>
+                        <span id="sprint-dates">Loading dates...</span>
+                    </div>
+                </div>
+                <div class="header-center">
+                    <div class="header-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Progress</span>
+                            <span class="stat-value" id="header-progress">0%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Capacity</span>
+                            <span class="stat-value" id="header-capacity">0h</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="header-actions">
+                        <button class="btn-icon" onclick="refreshData()" aria-label="Refresh data" title="Refresh">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-icon" onclick="exportData()" aria-label="Export data" title="Export">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7,10 12,15 17,10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </button>
+                        <button class="btn-icon" onclick="window.print()" aria-label="Print report" title="Print">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"></path>
+                                <path d="M14 2v4a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V2"></path>
+                                <path d="M20 14v-4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v4"></path>
+                                <path d="M2 18h20"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -24,12 +65,16 @@
             <!-- Executive Dashboard Section -->
             <section class="section dashboard-section" aria-labelledby="dashboard-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-dashboard" aria-hidden="true">📊</div>
+                    <div class="section-icon icon-dashboard" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    </div>
                     <h2 id="dashboard-heading">Executive Dashboard</h2>
                 </div>
                 <div class="dashboard-grid" role="region" aria-label="Executive dashboard with key metrics">
                     <div class="metric-card sprint-progress" role="article" aria-labelledby="sprint-progress-title">
-                        <div class="metric-icon">🎯</div>
+                        <div class="metric-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        </div>
                         <div class="metric-content">
                             <h3 id="sprint-progress-title">Sprint Progress</h3>
                             <div class="metric-value" id="sprint-progress-value">0%</div>
@@ -38,7 +83,9 @@
                     </div>
                     
                     <div class="metric-card team-utilization" role="article" aria-labelledby="team-utilization-title">
-                        <div class="metric-icon">👥</div>
+                        <div class="metric-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
                         <div class="metric-content">
                             <h3 id="team-utilization-title">Team Utilization</h3>
                             <div class="metric-value" id="team-utilization-value">0%</div>
@@ -47,7 +94,9 @@
                     </div>
                     
                     <div class="metric-card risk-indicator" role="article" aria-labelledby="risk-indicator-title">
-                        <div class="metric-icon">⚠️</div>
+                        <div class="metric-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        </div>
                         <div class="metric-content">
                             <h3 id="risk-indicator-title">Risk Level</h3>
                             <div class="metric-value" id="risk-indicator-value">Low</div>
@@ -56,7 +105,9 @@
                     </div>
                     
                     <div class="metric-card burndown-chart" role="article" aria-labelledby="burndown-title">
-                        <div class="metric-icon">📈</div>
+                        <div class="metric-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                        </div>
                         <div class="metric-content">
                             <h3 id="burndown-title">Burndown Status</h3>
                             <div class="burndown-mini" id="burndown-mini">
@@ -78,7 +129,7 @@
             <!-- Team Overview Section -->
             <section class="section" aria-labelledby="team-overview-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-team" aria-hidden="true">👥</div>
+                    <div class="section-icon icon-team" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
                     <h2 id="team-overview-heading">Team Overview</h2>
                 </div>
                 <table role="table" aria-label="Team members overview">
@@ -99,7 +150,7 @@
             <!-- Bandwidth Overview Section -->
             <section class="section" aria-labelledby="bandwidth-overview-heading">
                 <div class="section-header">
-                    <div class="section-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);" aria-hidden="true">📊</div>
+                    <div class="section-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
                     <h2 id="bandwidth-overview-heading">Overall Bandwidth Overview</h2>
                 </div>
                 <table role="table" aria-label="Bandwidth overview">
@@ -121,7 +172,7 @@
             <!-- Gantt Chart Section -->
             <section class="section" aria-labelledby="gantt-chart-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-gantt" aria-hidden="true">📈</div>
+                    <div class="section-icon icon-gantt" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
                     <h2 id="gantt-chart-heading">Sprint Timeline (Gantt Chart)</h2>
                 </div>
                 <div class="gantt-container" role="region" aria-label="Gantt chart timeline" tabindex="0">
@@ -136,17 +187,10 @@
                 </div>
             </section>
 
-            <!-- Mobile Zoom Controls -->
-            <div class="zoom-controls" style="display: none;">
-                <button class="zoom-btn zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
-                <button class="zoom-btn zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
-                <button class="zoom-btn zoom-reset" aria-label="Reset zoom" title="Reset zoom">⭯</button>
-            </div>
-
             <!-- Milestones Section -->
             <section class="section" aria-labelledby="milestones-heading">
                 <div class="section-header">
-                    <div class="section-icon icon-milestone" aria-hidden="true">🎯</div>
+                    <div class="section-icon icon-milestone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></div>
                     <h2 id="milestones-heading">Key Milestones</h2>
                 </div>
                 <table role="table" aria-label="Project milestones">
@@ -164,7 +208,119 @@
             </section>
         </main>
     </div>
+
+    <!-- Mobile UI Elements -->
+    <!-- Mobile Header -->
+    <header class="mobile-header mobile-only" id="mobile-header">
+        <button class="hamburger-menu" id="hamburger-menu" aria-label="Open menu" aria-expanded="false" aria-controls="menu-overlay">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <h1 class="mobile-header-title">Dashboard</h1>
+        <div class="mobile-actions">
+            <button class="mobile-search-btn" id="mobile-search-btn" aria-label="Search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon-svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Content Area -->
+    <main class="mobile-content mobile-only" id="mobile-content">
+        <!-- Loading Skeleton State -->
+        <div class="mobile-loading-skeleton" id="mobile-loading">
+            <div class="skeleton-card">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line short"></div>
+                </div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line"></div>
+                </div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile content will be dynamically inserted here -->
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-nav mobile-only" id="mobile-nav">
+        <button class="mobile-nav-item active" data-section="dashboard" aria-label="Dashboard">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+            <span class="nav-label">Home</span>
+        </button>
+        <button class="mobile-nav-item" data-section="timeline" aria-label="Timeline">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></span>
+            <span class="nav-label">Timeline</span>
+        </button>
+        <button class="mobile-nav-item" data-section="bandwidth" aria-label="Capacity">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
+            <span class="nav-label">Capacity</span>
+        </button>
+        <button class="mobile-nav-item" data-section="tasks" aria-label="Tasks">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+            <span class="nav-label">Tasks</span>
+        </button>
+        <button class="mobile-nav-item" data-section="milestones" aria-label="Milestones">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
+            <span class="nav-label">Goals</span>
+        </button>
+    </nav>
+
+    <!-- Mobile Overlays -->
+    <div class="menu-overlay mobile-only" id="menu-overlay">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <h3>Navigation</h3>
+                <button class="overlay-close" aria-label="Close menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="menu-section">
+                <button class="overlay-item" data-action="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard</button>
+                <button class="overlay-item" data-action="timeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line></svg> Timeline</button>
+                <button class="overlay-item" data-action="bandwidth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Capacity</button>
+                <button class="overlay-item" data-action="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> Tasks</button>
+                <button class="overlay-item" data-action="milestones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> Goals</button>
+            </div>
+            <hr>
+            <div class="menu-section">
+                <button class="overlay-item" data-action="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15A9 9 0 1 1 21 12"></path></svg> Refresh Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-overlay mobile-only" id="search-overlay">
+        <div class="search-container">
+            <div class="search-header">
+                <input type="text" class="mobile-search-input" placeholder="Search tasks, team members, milestones..." aria-label="Search">
+                <button class="search-close" aria-label="Close search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="search-results" role="listbox" aria-label="Search results">
+                <!-- Search results will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Toast Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
     <!-- Scripts -->
+    <script src="constants.js"></script>
     <script src="dataLoader.js"></script>
     <script src="renderer.js"></script>
 </body>

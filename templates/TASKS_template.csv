@@ -1,0 +1,21 @@
+id,name,owner,bu,start_date,end_date,status,priority,jira_id,jira_url,blockers,type,notes,completed,estimated_hours
+task-1,"Create MOU, NFA",avi,AL,2026-01-29,2026-02-16,in-progress,urgent,Not Provided,-,,UI Revamp/Fixes,"(Assigned by Vinit and Anup)",FALSE,80
+task-2,"AI-382 RFQ Web responsive",avi,AL,2026-02-10,2026-02-20,blocked,pending,AI-382,https://moglix.atlassian.net/browse/AI-382,"PM Requirements Pending for 2 screens rest completed",PWA,"Delayed: Exports module live + Vedanta urgent fixes.",FALSE,40
+task-3,"AI-377 Ledger Web responsive",avi,All,2026-02-17,2026-02-28,blocked,pending,AI-377,https://moglix.atlassian.net/browse/AI-377,"PM KT and Requirements Pending",PWA,,FALSE,32
+task-4,"UI fix on production",avi,All,2026-02-09,2026-02-10,completed,normal,-,-,,UI Fix,"UI Fix on prod",TRUE,8
+task-5,"VN-7583 - Demerger Popup",avi,AL,2026-01-29,2026-02-02,completed,normal,VN-7583,https://moglix.atlassian.net/browse/VN-7583,,New Popup,,TRUE,16
+task-6,"Implement authentication module",anup,Platform,2026-02-10,2026-02-14,in-progress,urgent,PLAT-101,https://moglix.atlassian.net/browse/PLAT-101,,Backend,OAuth2.0 integration,FALSE,24
+task-7,"Design mobile dashboard",priya,Platform,2026-02-11,2026-02-15,todo,normal,PLAT-102,https://moglix.atlassian.net/browse/PLAT-102,,Design,"Figma mockups required",FALSE,20
+task-8,"API performance optimization",anup,Platform,2026-02-12,2026-02-16,in-progress,urgent,PLAT-103,https://moglix.atlassian.net/browse/PLAT-103,,Backend,"Reduce response time to <200ms",FALSE,32
+task-9,"Write unit tests for checkout flow",rahul,Platform,2026-02-13,2026-02-17,todo,normal,PLAT-104,https://moglix.atlassian.net/browse/PLAT-104,,Testing,"Aim for 80% code coverage",FALSE,16
+task-10,"Database migration script",anup,Platform,2026-02-14,2026-02-18,review,normal,PLAT-105,https://moglix.atlassian.net/browse/PLAT-105,,Backend,"Pending DBA approval",FALSE,24
+task-11,"Update documentation wiki",vinit,All,2026-02-15,2026-02-19,todo,low,PLAT-106,https://moglix.atlassian.net/browse/PLAT-106,,Documentation,"API docs + user guides",FALSE,12
+task-12,"Security audit report review",vinit,Platform,2026-02-16,2026-02-20,pending,urgent,SEC-501,https://moglix.atlassian.net/browse/SEC-501,"Waiting for security team findings",Security,"High priority compliance requirement",FALSE,16
+task-13,"Setup CI/CD pipeline for new microservice",anup,Platform,2026-02-17,2026-02-21,todo,normal,PLAT-107,https://moglix.atlassian.net/browse/PLAT-107,,DevOps,"Jenkins + Docker deployment",FALSE,20
+task-14,"Mobile app beta testing",rahul,Platform,2026-02-18,2026-02-24,todo,normal,PLAT-108,https://moglix.atlassian.net/browse/PLAT-108,,Testing,"Test on iOS + Android devices",FALSE,24
+task-15,"Payment gateway integration",anup,Platform,2026-02-19,2026-02-25,in-progress,urgent,PLAT-109,https://moglix.atlassian.net/browse/PLAT-109,,Backend,"Razorpay + Stripe integration",FALSE,40
+task-16,"Refactor legacy code module",avi,Platform,2026-02-20,2026-02-26,todo,normal,PLAT-110,https://moglix.atlassian.net/browse/PLAT-110,,Refactoring,"Improve maintainability",FALSE,32
+task-17,"Customer feedback analysis",vinit,All,2026-02-21,2026-02-25,todo,low,PLAT-111,https://moglix.atlassian.net/browse/PLAT-111,,Research,"Analyze Q1 user surveys",FALSE,8
+task-18,"Design system color palette update",priya,Platform,2026-02-22,2026-02-26,todo,normal,PLAT-112,https://moglix.atlassian.net/browse/PLAT-112,,Design,"WCAG 2.1 AA compliance",FALSE,16
+task-19,"Load testing for Black Friday scale",rahul,Platform,2026-02-23,2026-02-28,todo,urgent,PLAT-113,https://moglix.atlassian.net/browse/PLAT-113,,Testing,"Simulate 10k concurrent users",FALSE,24
+task-20,"Third-party API integration - CRM",anup,Platform,2026-02-24,2026-03-02,todo,normal,PLAT-114,https://moglix.atlassian.net/browse/PLAT-114,"Waiting for API keys",Integration,"Salesforce API v52",FALSE,28
