@@ -829,23 +829,17 @@ function loadFallbackData() {
  */
 async function refreshData() {
     showLoadingIndicator();
-    let success = false;
-    try {
-        success = await loadAllData();
-
-        if (success && typeof renderAll === 'function') {
-            renderAll();
-        }
-    } catch (err) {
-        // Ensure we log the error but still hide the indicator below
-        console.error('refreshData error', err);
-    } finally {
-        // Always hide the loading indicator even if loadAllData throws
-        setTimeout(() => {
-            hideLoadingIndicator();
-        }, 300);
+    const success = await loadAllData();
+    
+    if (success && typeof renderAll === 'function') {
+        renderAll();
     }
-
+    
+    // Hide loading indicator after rendering completes
+    setTimeout(() => {
+        hideLoadingIndicator();
+    }, 300);
+    
     return success;
 }
 
@@ -890,9 +884,9 @@ function exportData() {
  * Show loading indicator
  */
 function showLoadingIndicator() {
-    // Append the loading indicator to document.body so position:fixed is relative to the viewport
-    if (!document.getElementById('loading-indicator')) {
-        document.body.insertAdjacentHTML('beforeend', `
+    const container = document.querySelector('.container');
+    if (container && !document.getElementById('loading-indicator')) {
+        container.insertAdjacentHTML('afterbegin', `
             <div id="loading-indicator" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;">
                 <div style="background:white;padding:30px;border-radius:12px;text-align:center;max-width:400px;">
                     <div style="font-size:3rem;margin-bottom:15px;">📊</div>
@@ -961,22 +955,18 @@ function showError(message) {
 if (typeof window !== 'undefined') {
     window.addEventListener('DOMContentLoaded', async () => {
         showLoadingIndicator();
-        try {
-            const success = await loadAllData();
-
-            // Render the UI after data loads
-            if (success && typeof renderAll === 'function') {
-                renderAll();
-            }
-        } catch (err) {
-            console.error('Error during initial load', err);
-        } finally {
-            // Hide loading indicator after rendering completes
-            // Small delay to ensure DOM updates are visible
-            setTimeout(() => {
-                hideLoadingIndicator();
-            }, 300);
+        const success = await loadAllData();
+        
+        // Render the UI after data loads
+        if (success && typeof renderAll === 'function') {
+            renderAll();
         }
+        
+        // Hide loading indicator after rendering completes
+        // Small delay to ensure DOM updates are visible
+        setTimeout(() => {
+            hideLoadingIndicator();
+        }, 300);
     });
     
     // Expose functions globally for HTML button access
