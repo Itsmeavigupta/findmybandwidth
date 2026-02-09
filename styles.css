@@ -1461,7 +1461,7 @@ tbody tr:last-child td {
 
     .gantt-header-task,
     .gantt-task-name {
-        min-width: 300px;
+        min-width: 210px;
     }
 }
 
