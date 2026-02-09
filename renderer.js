@@ -203,10 +203,14 @@ function renderGanttChart() {
     
     dates.forEach(date => {
         const day = new Date(date).getDate();
+        const weekday = new Date(date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0);
         const isWE = isWeekend(date);
         const isHol = isHoliday(date);
         const isToday = date === today;
-        ganttParts.push(`<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" title="${formatDate(date)}">${day}</div>`);
+        ganttParts.push(`<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" title="${formatDate(date)}">
+            <div class="gantt-header-date">${day}</div>
+            <div class="gantt-header-weekday">${weekday}</div>
+        </div>`);
     });
     ganttParts.push('</div>');
     
@@ -226,7 +230,11 @@ function renderGanttChart() {
             dateInfo = startDateFormatted === endDateFormatted ? startDateFormatted : `${startDateFormatted} - ${endDateFormatted}`;
         }
         
-        ganttParts.push(`<div class="gantt-row" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
+        // Get status and priority styling
+        const statusInfo = getStatusInfo(task.status, task.completed);
+        const priorityInfo = getPriorityInfo(task.priority);
+        
+        ganttParts.push(`<div class="gantt-row ${statusInfo.class} ${priorityInfo.class}" style="grid-template-columns: 220px repeat(${dateCount}, minmax(30px, 1fr));">
             <div class="gantt-task-name">
                 <span class="gantt-task-title">${escapeHtml(task.name)}</span>
                 <span class="gantt-task-owner">${escapeHtml(ownerName)} • ${dateInfo}</span>
@@ -235,10 +243,8 @@ function renderGanttChart() {
         // Handle tasks with and without dates
         if (!task.startDate || !task.endDate) {
             // Task without dates - show status indicator across entire timeline
-            const statusClass = task.completed ? 'bar-success' : 
-                              task.status.toLowerCase().includes('progress') ? 'bar-warning' :
-                              task.status.toLowerCase().includes('pending') ? 'bar-pending' : 'bar-info';
-            const statusLabel = task.completed ? '✓' : task.status.charAt(0).toUpperCase();
+            const statusInfo = getStatusInfo(task.status, task.completed);
+            const statusClass = `bar-${statusInfo.color}`;
             
             dates.forEach((date, index) => {
                 const isWE = isWeekend(date);
@@ -253,7 +259,7 @@ function renderGanttChart() {
                 // Show status indicator on the first cell only
                 if (index === 0) {
                     ganttParts.push(`<div class="gantt-bar ${statusClass}" style="left: 2px; width: calc(100% - 4px);" title="${escapeHtml(task.name)}: ${task.status}" role="img" aria-label="Task status: ${task.status}">
-                        <span class="gantt-bar-label">${statusLabel}</span>
+                        <span class="gantt-bar-label">${statusInfo.label}</span>
                     </div>`);
                 }
                 
@@ -343,11 +349,42 @@ function renderGanttChart() {
     ganttContainer.innerHTML = ganttParts.join('');
 }
 
-// XSS protection helper
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// Helper function to get status styling
+function getStatusInfo(status, completed) {
+    if (completed) {
+        return { class: 'status-completed', label: '✓', color: 'success' };
+    }
+    
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('blocked') || statusLower.includes('stuck')) {
+        return { class: 'status-blocked', label: '🚫', color: 'danger' };
+    } else if (statusLower.includes('in progress') || statusLower.includes('active')) {
+        return { class: 'status-in-progress', label: '▶', color: 'warning' };
+    } else if (statusLower.includes('review') || statusLower.includes('qa')) {
+        return { class: 'status-review', label: '👁', color: 'info' };
+    } else if (statusLower.includes('pending') || statusLower.includes('planned')) {
+        return { class: 'status-pending', label: '⏳', color: 'secondary' };
+    } else if (statusLower.includes('delayed') || statusLower.includes('behind')) {
+        return { class: 'status-delayed', label: '⚠', color: 'danger' };
+    } else if (statusLower.includes('cancelled') || statusLower.includes('abandoned')) {
+        return { class: 'status-cancelled', label: '✗', color: 'muted' };
+    } else {
+        return { class: 'status-not-started', label: '○', color: 'secondary' };
+    }
+}
+
+// Helper function to get priority styling
+function getPriorityInfo(priority) {
+    switch (priority) {
+        case 'urgent':
+            return { class: 'priority-urgent', color: '#dc3545' };
+        case 'normal':
+            return { class: 'priority-normal', color: '#ffc107' };
+        case 'pending':
+            return { class: 'priority-pending', color: '#6c757d' };
+        default:
+            return { class: 'priority-normal', color: '#ffc107' };
+    }
 }
 
 function renderTaskCards(owner) {
@@ -373,16 +410,14 @@ function renderTaskCards(owner) {
     const tasks = getFilteredTasks().filter(t => t.owner === owner || t.owner === 'both');
     
     taskGrid.innerHTML = tasks.map(task => {
+        const statusInfo = getStatusInfo(task.status, task.completed);
+        const priorityInfo = getPriorityInfo(task.priority);
+        
         const urgencyClass = task.priority === 'urgent' ? 'urgent' : 
                            task.priority === 'pending' ? 'pending' : '';
         
-        const badgeClass = task.priority === 'urgent' ? 'badge-danger' :
-                          task.priority === 'pending' ? 'badge-warning' :
-                          task.status.toLowerCase().includes('complete') || task.completed ? 'badge-success' : 'badge-info';
-        
-        const badgeIcon = task.priority === 'urgent' ? '🔴' :
-                         task.priority === 'pending' ? '⏳' :
-                         task.status.toLowerCase().includes('complete') || task.completed ? '✅' : '📋';
+        const badgeClass = `badge-${statusInfo.color}`;
+        const badgeIcon = statusInfo.label;
         
         const jiraHTML = task.jiraId ? 
             `<span><strong>Jira:</strong> <a href="${task.jiraUrl}" class="jira-link" target="_blank">${task.jiraId}</a></span>` :

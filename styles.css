@@ -360,10 +360,28 @@ tbody tr:last-child td {
 
 .gantt-header-day {
     text-align: center;
-    padding: 10px 4px;
+    padding: 6px 4px;
     border-right: 1px solid var(--border);
     font-weight: 600;
     transition: background 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.gantt-header-date {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.gantt-header-weekday {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    line-height: 1;
 }
 
 .gantt-header-day:hover {
@@ -393,6 +411,90 @@ tbody tr:last-child td {
 
 .gantt-row:hover {
     background: #f0f9ff;
+}
+
+/* Status-based row highlighting */
+.gantt-row.status-completed {
+    background: rgba(25, 135, 84, 0.1);
+    border-left: 3px solid #198754;
+}
+
+.gantt-row.status-in-progress {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+}
+
+.gantt-row.status-blocked {
+    background: rgba(220, 53, 69, 0.1);
+    border-left: 3px solid #dc3545;
+}
+
+.gantt-row.status-review {
+    background: rgba(13, 202, 240, 0.1);
+    border-left: 3px solid #0dcaf0;
+}
+
+.gantt-row.status-pending {
+    background: rgba(108, 117, 125, 0.1);
+    border-left: 3px solid #6c757d;
+}
+
+.gantt-row.status-delayed {
+    background: rgba(255, 193, 7, 0.15);
+    border-left: 3px solid #fd7e14;
+}
+
+.gantt-row.status-cancelled {
+    background: rgba(108, 117, 125, 0.05);
+    border-left: 3px solid #6c757d;
+    opacity: 0.7;
+}
+
+.gantt-row.status-not-started {
+    background: rgba(248, 249, 250, 0.5);
+    border-left: 3px solid #dee2e6;
+}
+
+/* Priority-based highlighting (combines with status) */
+.gantt-row.priority-urgent {
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.3);
+}
+
+.gantt-row.priority-urgent.status-completed,
+.gantt-row.priority-urgent.status-in-progress {
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.5);
+}
+
+.gantt-row.priority-pending {
+    opacity: 0.8;
+}
+
+.gantt-row:hover.status-completed {
+    background: rgba(25, 135, 84, 0.15);
+}
+
+.gantt-row:hover.status-in-progress {
+    background: rgba(255, 193, 7, 0.15);
+}
+
+.gantt-row:hover.status-blocked {
+    background: rgba(220, 53, 69, 0.15);
+}
+
+.gantt-row:hover.status-review {
+    background: rgba(13, 202, 240, 0.15);
+}
+
+.gantt-row:hover.status-pending {
+    background: rgba(108, 117, 125, 0.15);
+}
+
+.gantt-row:hover.status-delayed {
+    background: rgba(255, 193, 7, 0.2);
+}
+
+.gantt-row:hover.status-not-started {
+    background: rgba(248, 249, 250, 0.7);
 }
 
 .gantt-task-name {
