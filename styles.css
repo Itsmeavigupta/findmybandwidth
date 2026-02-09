@@ -2946,6 +2946,14 @@ tbody tr:last-child td {
    ============================================= */
 
 @media screen and (max-width: 768px) {
+    /* FIX: Ensure html/body allow scrolling on Android Chrome */
+    html, body {
+        overflow-x: hidden;
+        overflow-y: auto !important;
+        height: auto !important;
+        touch-action: manipulation; /* Allow scroll + pinch, works on Android */
+    }
+
     /* Hide desktop elements on mobile (works with or without JS) */
     .desktop-only {
         display: none !important;
@@ -2986,8 +2994,7 @@ tbody tr:last-child td {
         background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
         min-height: 100vh;
         padding-bottom: 80px; /* Space for bottom nav */
-        overscroll-behavior: none;
-        touch-action: pan-y;
+        /* REMOVED: overscroll-behavior and touch-action were blocking scroll on Android Chrome */
     }
     
     .container {
@@ -3160,8 +3167,8 @@ tbody tr:last-child td {
         padding-bottom: 100px; /* Extra space for bottom nav + safe area */
         min-height: calc(100vh - 92px);
         overflow-x: hidden;
-        overscroll-behavior: contain;
-        touch-action: pan-y;
+        overflow-y: auto; /* Explicitly enable vertical scrolling for Android */
+        -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
         animation: contentFadeIn 0.2s ease 0.2s both;
     }
     
