@@ -1439,6 +1439,12 @@ tbody tr:last-child td {
     justify-content: space-around;
     align-items: stretch;
     padding-bottom: env(safe-area-inset-bottom, 8px);
+    pointer-events: none; /* Don't block touch events to content below */
+}
+
+/* Re-enable pointer events for nav buttons */
+.mobile-nav-item {
+    pointer-events: auto;
 }
 
 /* Mobile Header - Consolidated */
@@ -3020,6 +3026,11 @@ tbody tr:last-child td {
         z-index: 1001;
         box-shadow: 0 2px 12px rgba(102, 126, 234, 0.25);
         animation: bannerSlideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        pointer-events: none; /* Don't block touch events to content below */
+    }
+    
+    .banner-content {
+        pointer-events: auto; /* Re-enable for banner content */
     }
     
     @keyframes bannerSlideDown {
@@ -3091,6 +3102,12 @@ tbody tr:last-child td {
         z-index: 1000;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         animation: headerSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+        pointer-events: none; /* Don't block touch events to content below */
+    }
+    
+    /* Re-enable pointer events for interactive header elements */
+    .mobile-header > * {
+        pointer-events: auto;
     }
     
     @keyframes headerSlideUp {

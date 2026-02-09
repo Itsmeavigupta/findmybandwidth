@@ -884,6 +884,12 @@ function exportData() {
  * Show loading indicator
  */
 function showLoadingIndicator() {
+    // Don't show loading indicator on mobile devices (max-width: 768px)
+    if (window.innerWidth <= 768) {
+        console.log('Skipping loading indicator on mobile');
+        return;
+    }
+    
     const container = document.querySelector('.container');
     if (container && !document.getElementById('loading-indicator')) {
         container.insertAdjacentHTML('afterbegin', `
