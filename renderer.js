@@ -1804,7 +1804,6 @@ function handleOverlayAction(action) {
     switch (action) {
         case 'dashboard':
         case 'timeline':
-        case 'team':
         case 'bandwidth':
         case 'tasks':
         case 'milestones':
@@ -1876,9 +1875,6 @@ function renderMobileSection(section) {
     switch (section) {
         case 'dashboard':
             html = renderMobileDashboard();
-            break;
-        case 'team':
-            html = renderMobileTeam();
             break;
         case 'bandwidth':
             html = renderMobileBandwidth();

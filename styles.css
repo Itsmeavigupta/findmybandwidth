@@ -2803,6 +2803,8 @@ tbody tr:last-child td {
         background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
         min-height: 100vh;
         padding-bottom: 80px; /* Space for bottom nav */
+        overscroll-behavior: none;
+        touch-action: pan-y;
     }
     
     .container {
@@ -2896,6 +2898,8 @@ tbody tr:last-child td {
         padding-bottom: 100px; /* Extra space for bottom nav + safe area */
         min-height: calc(100vh - 60px);
         overflow-x: hidden;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
     }
     
     /* Mobile Navigation - Consolidated */
