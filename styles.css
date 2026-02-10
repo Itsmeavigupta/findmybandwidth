@@ -330,6 +330,125 @@ body {
     }
 }
 
+/* =============================================
+   CUSTOM TOOLTIPS
+   Enhanced tooltips with better design than native browser tooltips
+   ============================================= */
+
+/* Tooltip base styles - applies to all elements with title attribute */
+[title] {
+    position: relative;
+}
+
+/* Make buttons and interactive elements show help cursor on hover */
+button[title],
+.btn-icon[title],
+.mobile-nav-item[title] {
+    cursor: pointer;
+}
+
+/* Create custom tooltip on hover using CSS pseudo-elements */
+[title]:hover::before,
+[title]:hover::after {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+/* Tooltip content (text bubble) */
+[title]:hover::before {
+    content: attr(title);
+    background: var(--gray-900);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    max-width: 250px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    animation: tooltipFadeIn 0.2s ease 0.6s forwards;
+}
+
+/* Tooltip arrow */
+[title]:hover::after {
+    content: '';
+    border: 5px solid transparent;
+    border-top-color: var(--gray-900);
+    bottom: calc(100% + 3px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    animation: tooltipFadeIn 0.2s ease 0.6s forwards;
+}
+
+@keyframes tooltipFadeIn {
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Prevent tooltips on touch devices (mobile) - use native title behavior */
+@media (hover: none) and (pointer: coarse) {
+    [title]:hover::before,
+    [title]:hover::after {
+        display: none;
+    }
+}
+
+/* Allow wrapping for longer tooltips */
+button[title]:hover::before,
+.metric-compact[title]:hover::before,
+.gantt-bar[title]:hover::before {
+    white-space: normal;
+    max-width: 220px;
+    text-align: center;
+}
+
+/* Bottom tooltip variant for elements near top of viewport */
+.mobile-header [title]:hover::before {
+    bottom: auto;
+    top: calc(100% + 8px);
+    transform: translateX(-50%) translateY(-4px);
+    animation: tooltipFadeInBottom 0.2s ease 0.6s forwards;
+}
+
+.mobile-header [title]:hover::after {
+    bottom: auto;
+    top: calc(100% + 3px);
+    border-top-color: transparent;
+    border-bottom-color: var(--gray-900);
+    transform: translateX(-50%) translateY(-4px);
+    animation: tooltipFadeInBottom 0.2s ease 0.6s forwards;
+}
+
+@keyframes tooltipFadeInBottom {
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Ensure tooltips stay within viewport on gantt chart */
+.gantt-row [title]:hover::before {
+    left: 50%;
+    right: auto;
+}
+
+/* Fix for mobile nav tooltips appearing below finger on tap */
+.mobile-nav-item[title]:hover::before {
+    bottom: calc(100% + 12px);
+}
+
+.mobile-nav-item[title]:hover::after {
+    bottom: calc(100% + 7px);
+}
+
 /* Mobile/Desktop visibility control */
 .mobile-only {
     display: none;
