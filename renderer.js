@@ -741,7 +741,7 @@ function renderGanttChart() {
         const isWE = isWeekend(date);
         const isHol = isHoliday(date);
         const isToday = date === today;
-        ganttParts.push(`<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" title="${formatDate(date)}">
+        ganttParts.push(`<div class="gantt-header-day ${isWE || isHol ? 'weekend' : ''} ${isToday ? 'today' : ''}" data-tip="${formatDate(date)}">
             <div class="gantt-header-date">${day}</div>
             <div class="gantt-header-weekday">${weekday}</div>
         </div>`);
@@ -792,7 +792,7 @@ function renderGanttChart() {
                 
                 // Show status indicator on the first cell only
                 if (index === 0) {
-                    ganttParts.push(`<div class="gantt-bar ${statusClass}" style="left: 2px; width: calc(100% - 4px);" title="${escapeHtml(task.name)}: ${task.status}" role="img" aria-label="Task status: ${task.status}">
+                    ganttParts.push(`<div class="gantt-bar ${statusClass}" style="left: 2px; width: calc(100% - 4px);" data-tip="${escapeHtml(task.name)}: ${task.status}" role="img" aria-label="Task status: ${task.status}">
                         <span class="gantt-bar-label">${statusInfo.label}</span>
                     </div>`);
                 }
@@ -873,7 +873,7 @@ function renderGanttChart() {
                         const isOverflowing = (actualStartIndex < 0 || actualEndIndex >= dateCount) ? 
                                             ' (continues beyond timeline)' : '';
                         
-                        ganttParts.push(`<div class="gantt-bar ${barClass}" style="left: ${barPosition}; width: ${barWidth};" title="${escapeHtml(task.name)}: ${dateInfo} (${workingDays} working days)${isOverflowing}" role="img" aria-label="Task duration: ${workingDays} working days${isOverflowing}">
+                        ganttParts.push(`<div class="gantt-bar ${barClass}" style="left: ${barPosition}; width: ${barWidth};" data-tip="${escapeHtml(task.name)}: ${dateInfo} (${workingDays} working days)${isOverflowing}" role="img" aria-label="Task duration: ${workingDays} working days${isOverflowing}">
                             <span class="gantt-bar-label">${barLabel}</span>
                         </div>`);
                     }
@@ -1721,7 +1721,7 @@ function renderCommandPaletteResults(query) {
     ];
     
     if (!q) {
-        // Show navigation + recent tasks
+        // Navigation commands
         navSections.forEach(nav => {
             items.push({
                 type: 'nav',
@@ -1732,9 +1732,14 @@ function renderCommandPaletteResults(query) {
             });
         });
         
-        // Show quick actions
-        items.push({ type: 'action', title: 'Toggle Dark Mode', subtitle: 'Theme', action: 'toggleTheme', badge: '🌓' });
-        items.push({ type: 'action', title: 'Refresh Data', subtitle: 'Action', action: 'refresh', badge: '↻' });
+        // Quick actions
+        items.push({ type: 'action', title: 'Toggle Dark Mode', subtitle: 'Switch between light & dark theme', action: 'toggleTheme', badge: '🌓' });
+        items.push({ type: 'action', title: 'Refresh Data', subtitle: 'Re-fetch latest data from Google Sheets', action: 'refresh', badge: '↻' });
+        items.push({ type: 'action', title: 'Export Data', subtitle: 'Download sprint data as CSV', action: 'export', badge: '↓' });
+        items.push({ type: 'action', title: 'Print Report', subtitle: 'Print the current sprint report', action: 'print', badge: '⎙' });
+        
+        // Search hints
+        items.push({ type: 'hint', title: 'Search tasks by name or Jira ID...', subtitle: 'Type to search across tasks, members, milestones', badge: '' });
     } else {
         // Filter navigation
         navSections.forEach(nav => {
@@ -1800,7 +1805,11 @@ function renderCommandPaletteResults(query) {
         return;
     }
     
-    results.innerHTML = items.map((item, idx) => `
+    results.innerHTML = (q ? '' : '<div class="command-palette-section-label">What would you like to do?</div>') + items.map((item, idx) => {
+        if (item.type === 'hint') {
+            return `<div class="command-palette-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> ${escapeHtml(item.title)}</div>`;
+        }
+        return `
         <div class="command-palette-item ${idx === 0 ? 'active' : ''}" data-type="${item.type}" data-section="${item.section || ''}" data-task-id="${item.taskId || ''}" data-action="${item.action || ''}">
             <div class="command-palette-item-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1808,6 +1817,10 @@ function renderCommandPaletteResults(query) {
                       item.type === 'member' ? '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>' : 
                       item.type === 'milestone' ? '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>' :
                       item.type === 'nav' ? '<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>' :
+                      item.action === 'toggleTheme' ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>' :
+                      item.action === 'refresh' ? '<polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10"></path>' :
+                      item.action === 'export' ? '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>' :
+                      item.action === 'print' ? '<polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>' :
                       '<circle cx="12" cy="12" r="5"></circle>'}
                 </svg>
             </div>
@@ -1817,7 +1830,7 @@ function renderCommandPaletteResults(query) {
             </div>
             ${item.badge ? `<span class="command-palette-item-badge">${escapeHtml(item.badge)}</span>` : ''}
         </div>
-    `).join('');
+    `}).join('');
     
     // Add click handlers
     results.querySelectorAll('.command-palette-item').forEach(el => {
@@ -1837,6 +1850,10 @@ function renderCommandPaletteResults(query) {
                     document.getElementById('theme-toggle')?.click();
                 } else if (action === 'refresh') {
                     if (typeof refreshData === 'function') refreshData();
+                } else if (action === 'export') {
+                    if (typeof exportData === 'function') exportData();
+                } else if (action === 'print') {
+                    if (window.printReport) window.printReport(); else window.print();
                 }
             }
             
@@ -1874,11 +1891,30 @@ function renderDesktopUI() {
 
 function updateDesktopTodayBadge() {
     const badge = document.getElementById('today-date-text');
+    const timeBadge = document.getElementById('today-time-text');
     if (!badge) return;
     
-    const today = new Date(getTodayLocalDate() + 'T00:00:00');
-    const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
-    badge.textContent = today.toLocaleDateString('en-US', options);
+    const now = new Date();
+    // Format date in IST
+    const dateOpts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' };
+    badge.textContent = now.toLocaleDateString('en-IN', dateOpts);
+    
+    // Format time in IST
+    if (timeBadge) {
+        const timeOpts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' };
+        timeBadge.textContent = now.toLocaleTimeString('en-IN', timeOpts) + ' IST';
+    }
+    
+    // Auto-update every 30 seconds
+    if (!window._todayBadgeTimer) {
+        window._todayBadgeTimer = setInterval(() => {
+            const n = new Date();
+            if (timeBadge) {
+                const tOpts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' };
+                timeBadge.textContent = n.toLocaleTimeString('en-IN', tOpts) + ' IST';
+            }
+        }, 30000);
+    }
 }
 
 function updateGoogleSheetLink() {
@@ -2005,26 +2041,26 @@ function renderDesktopSprintCard() {
         const milestonesCount = appData.milestones ? appData.milestones.length : 0;
         
         quickStatsEl.innerHTML = `
-            <div class="sprint-quick-stat" title="Team members in this sprint">
+            <div class="sprint-quick-stat" data-tip="Team members in this sprint">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 <span>${teamSize} Members</span>
             </div>
-            <div class="sprint-quick-stat" title="Total tasks in this sprint">
+            <div class="sprint-quick-stat" data-tip="Total tasks in this sprint">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
                 <span>${totalTasks} Tasks</span>
             </div>
-            <div class="sprint-quick-stat" title="Total estimated hours across all tasks">
+            <div class="sprint-quick-stat" data-tip="Total estimated hours across all tasks">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 <span>${totalHours}h Estimated</span>
             </div>
             ${blockedTasks > 0 ? `
-                <div class="sprint-quick-stat blocked" title="${blockedTasks} task${blockedTasks !== 1 ? 's' : ''} currently blocked">
+                <div class="sprint-quick-stat blocked" data-tip="${blockedTasks} task${blockedTasks !== 1 ? 's' : ''} currently blocked">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     <span>${blockedTasks} Blocked</span>
                 </div>
             ` : ''}
             ${milestonesCount > 0 ? `
-                <div class="sprint-quick-stat" title="Key milestones to track">
+                <div class="sprint-quick-stat" data-tip="Key milestones to track">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
                     <span>${milestonesCount} Milestones</span>
                 </div>
@@ -2208,7 +2244,7 @@ function renderDesktopTeamList() {
                          allocatedHours > sprintBandwidth * 0.8 ? 'var(--warning)' : 'var(--success)';
         
         return `
-            <div class="desktop-team-member" title="${escapeHtml(member.name)}: ${totalTasks} tasks, ${allocatedHours}h allocated of ${sprintBandwidth}h">
+            <div class="desktop-team-member" data-tip="${escapeHtml(member.name)}: ${totalTasks} tasks, ${allocatedHours}h allocated of ${sprintBandwidth}h">
                 <div class="team-member-avatar" style="background: ${gradient};">
                     ${initials}
                 </div>
@@ -2226,15 +2262,15 @@ function renderDesktopTeamList() {
                     </div>
                 </div>
                 <div class="team-member-stats">
-                    <div class="team-stat" title="Total tasks assigned">
+                    <div class="team-stat" data-tip="Total tasks assigned">
                         <span class="team-stat-value">${totalTasks}</span>
                         <span class="team-stat-label">Total</span>
                     </div>
-                    <div class="team-stat" title="Active / in-progress tasks">
+                    <div class="team-stat" data-tip="Active / in-progress tasks">
                         <span class="team-stat-value">${activeTasks}</span>
                         <span class="team-stat-label">Active</span>
                     </div>
-                    <div class="team-stat" title="Completed tasks">
+                    <div class="team-stat" data-tip="Completed tasks">
                         <span class="team-stat-value">${completedTasks}</span>
                         <span class="team-stat-label">Done</span>
                     </div>
@@ -2243,12 +2279,12 @@ function renderDesktopTeamList() {
                     const avail = getNextAvailableDay(member, 2);
                     if (avail) {
                         const isToday = avail.date === getTodayLocalDate();
-                        return `<div class="next-available-badge" title="Next day with ${avail.freeHours}h free">
+                        return `<div class="next-available-badge" data-tip="Next day with ${avail.freeHours}h free">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             ${isToday ? 'Today' : formatDate(avail.date)} · ${avail.freeHours}h free
                         </div>`;
                     } else {
-                        return `<div class="next-available-badge busy" title="No available slot this sprint">
+                        return `<div class="next-available-badge busy" data-tip="No available slot this sprint">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
                             Fully booked
                         </div>`;
@@ -2302,27 +2338,27 @@ function renderDesktopBandwidthOverview() {
             </div>
         </div>
         <div class="bandwidth-overview-grid">
-            <div class="bandwidth-overview-item" title="Total available hours across all team members for this sprint">
+            <div class="bandwidth-overview-item" data-tip="Total available hours across all team members for this sprint">
                 <span class="bandwidth-label">Capacity</span>
                 <span class="bandwidth-value">${teamSprintBandwidth}h</span>
             </div>
-            <div class="bandwidth-overview-item" title="Sum of estimated hours from all tasks">
+            <div class="bandwidth-overview-item" data-tip="Sum of estimated hours from all tasks">
                 <span class="bandwidth-label">Allocated</span>
                 <span class="bandwidth-value ${utilizationClass}">${totalAllocatedHours}h</span>
             </div>
-            <div class="bandwidth-overview-item" title="Capacity minus allocated hours = unassigned capacity">
+            <div class="bandwidth-overview-item" data-tip="Capacity minus allocated hours = unassigned capacity">
                 <span class="bandwidth-label">Available</span>
                 <span class="bandwidth-value ${availableHours > 0 ? 'success' : 'danger'}">${availableHours}h</span>
             </div>
-            <div class="bandwidth-overview-item" title="Hours remaining based on time elapsed in the sprint">
+            <div class="bandwidth-overview-item" data-tip="Hours remaining based on time elapsed in the sprint">
                 <span class="bandwidth-label">Remaining</span>
                 <span class="bandwidth-value">${Math.round(teamRemainingBandwidth)}h</span>
             </div>
         </div>
         <div class="bandwidth-overview-summary">
-            <span title="Average estimated hours per task">${avgHoursPerTask}h / task</span>
+            <span data-tip="Average estimated hours per task">${avgHoursPerTask}h / task</span>
             <span>·</span>
-            <span title="Average allocated hours per team member">${avgPerMember}h / member</span>
+            <span data-tip="Average allocated hours per team member">${avgPerMember}h / member</span>
             <span>·</span>
             <span>${teamSize} members · ${totalTasks} tasks</span>
         </div>
@@ -2570,7 +2606,7 @@ function renderDesktopBandwidthGrid() {
                              utilizationPercent > 80 ? 'var(--warning)' : 'var(--success)';
         
         return `
-            <div class="desktop-bandwidth-card" title="${escapeHtml(member.name)}: ${memberTasks.length} tasks, ${allocatedHours}h / ${sprintBandwidth}h capacity">
+            <div class="desktop-bandwidth-card" data-tip="${escapeHtml(member.name)}: ${memberTasks.length} tasks, ${allocatedHours}h / ${sprintBandwidth}h capacity">
                 <div class="bandwidth-card-header">
                     <div class="bandwidth-card-avatar" style="background: ${gradient};">
                         ${initials}
@@ -2579,7 +2615,7 @@ function renderDesktopBandwidthGrid() {
                         <h4>${escapeHtml(member.name)}</h4>
                         <span>${escapeHtml(member.role || 'Team Member')}</span>
                     </div>
-                    <span class="bandwidth-card-task-count" title="${memberTasks.length} task${memberTasks.length !== 1 ? 's' : ''} assigned">${memberTasks.length} tasks</span>
+                    <span class="bandwidth-card-task-count" data-tip="${memberTasks.length} task${memberTasks.length !== 1 ? 's' : ''} assigned">${memberTasks.length} tasks</span>
                 </div>
                 <div class="bandwidth-card-progress">
                     <div class="bandwidth-progress-bar">
@@ -2612,18 +2648,18 @@ function renderDesktopBandwidthGrid() {
                     const avail = getNextAvailableDay(member, 2);
                     if (avail) {
                         const isToday = avail.date === getTodayLocalDate();
-                        return `<div class="next-available-badge" title="Next day with ${avail.freeHours}h free">
+                        return `<div class="next-available-badge" data-tip="Next day with ${avail.freeHours}h free">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             ${isToday ? 'Today' : formatDate(avail.date)} · ${avail.freeHours}h free
                         </div>`;
                     } else {
-                        return `<div class="next-available-badge busy" title="No available slot this sprint">
+                        return `<div class="next-available-badge busy" data-tip="No available slot this sprint">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
                             Fully booked
                         </div>`;
                     }
                 })()}
-                <div class="bandwidth-view-details-btn" title="View full profile for ${escapeHtml(member.name)}">
+                <div class="bandwidth-view-details-btn" data-tip="View full profile for ${escapeHtml(member.name)}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     View Details
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -2885,7 +2921,7 @@ function renderDesktopSprintCalendar() {
                 const weekTasks = week.dates.reduce((sum, d) => sum + d.taskCount, 0);
                 return `
                     <div class="desktop-calendar-week-row ${isCurrentWeek ? 'current-week' : ''}">
-                        <div class="desktop-calendar-week-label" title="Week ${week.weekNumber}: ${weekTasks} tasks">W${week.weekNumber}</div>
+                        <div class="desktop-calendar-week-label" data-tip="Week ${week.weekNumber}: ${weekTasks} tasks">W${week.weekNumber}</div>
                         ${week.dates.map(day => {
                             const intensity = maxTasks > 0 ? Math.min(day.taskCount / maxTasks, 1) : 0;
                             const monthShort = day.date.toLocaleDateString('en-US', { month: 'short' });
@@ -2907,7 +2943,7 @@ function renderDesktopSprintCalendar() {
                                     ${day.taskCount >= 3 ? 'high-load' : ''}
                                     ${dayStatusClass}"
                                     style="--intensity: ${intensity.toFixed(2)}; grid-column: ${day.dayOfWeek + 2};"
-                                    title="${monthShort} ${day.dayNum}: ${day.isWeekend ? 'Weekend (No Work)' : `${day.taskCount} task${day.taskCount !== 1 ? 's' : ''} — ✅${ds.completed} 🔵${ds.inProgress} 🔴${ds.blocked} 🔍${ds.review} ⬜${ds.todo}`}">
+                                    data-tip="${monthShort} ${day.dayNum}: ${day.isWeekend ? 'Weekend (No Work)' : `${day.taskCount} task${day.taskCount !== 1 ? 's' : ''} — ✅${ds.completed} 🔵${ds.inProgress} 🔴${ds.blocked} 🔍${ds.review} ⬜${ds.todo}`}">
                                     <span class="day-num">${day.dayNum}</span>
                                     ${!day.isWeekend && day.taskCount > 0 ? `<span class="day-tasks">${day.taskCount}</span>` : ''}
                                     ${day.isWeekend ? '<span class="day-off-mark">✕</span>' : ''}
@@ -3012,13 +3048,13 @@ function renderTeamAvailability() {
                     const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 2);
                     const isToday = d === todayStr;
                     const isPast = d < todayStr;
-                    return `<div class="team-avail-day-header ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" title="${formatDate(d)}" style="${isToday ? 'color: var(--primary); font-weight: 700;' : ''}">${dayName}<br>${dayNum}</div>`;
+                    return `<div class="team-avail-day-header ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" data-tip="${formatDate(d)}" style="${isToday ? 'color: var(--primary); font-weight: 700;' : ''}">${dayName}<br>${dayNum}</div>`;
                 }).join('')}
             </div>
             ${appData.teamMembers.map(member => {
                 const leaveSet = memberLeaves[member.id];
                 return `<div class="team-avail-row" style="grid-template-columns: ${gridCols};">
-                    <div class="team-avail-name" title="${member.name}">${escapeHtml(member.name.split(' ')[0])}</div>
+                    <div class="team-avail-name" data-tip="${member.name}">${escapeHtml(member.name.split(' ')[0])}</div>
                     ${displayDates.map(d => {
                         const isPast = d < todayStr;
                         const isOnLeave = leaveSet.has(d);
@@ -3050,7 +3086,7 @@ function renderTeamAvailability() {
                             title = `${member.name}: Free on ${formatDate(d)}`;
                         }
                         
-                        return `<div class="team-avail-cell ${cellClass}" title="${title}">${label}</div>`;
+                        return `<div class="team-avail-cell ${cellClass}" data-tip="${title}">${label}</div>`;
                     }).join('')}
                 </div>`;
             }).join('')}
@@ -4183,7 +4219,7 @@ function renderMobileDashboard() {
 
             <!-- Sprint Context Header with Today's Date -->
             <div class="mobile-card sprint-context-card">
-                <div class="sprint-header" title="Current sprint information">
+                <div class="sprint-header" data-tip="Current sprint information">
                     <h3 class="sprint-name">${escapeHtml(sprintName)}</h3>
                     <div class="sprint-dates">${sprintStart} - ${sprintEnd}</div>
                     ${sprintStateHtml}
@@ -4199,7 +4235,7 @@ function renderMobileDashboard() {
                     ${timeState.isValid && !timeState.isComplete ? 
                         `<span class="remaining-days">${timeState.remainingWorkingDays} working days left</span>` : ''}
                 </div>
-                <div class="sprint-progress-bar" title="Overall sprint completion">
+                <div class="sprint-progress-bar" data-tip="Overall sprint completion">
                     <div class="sprint-progress-fill" style="width: ${progressPercent}%"></div>
                 </div>
                 <div class="sprint-progress-text">${progressPercent}% complete (${metrics.completed}/${metrics.total} tasks)</div>
@@ -4209,7 +4245,7 @@ function renderMobileDashboard() {
             <div class="mobile-card">
                 <div class="card-header">
                     <h3>Sprint Status</h3>
-                    <button type="button" class="help-icon-button" aria-label="Task status breakdown" title="Task status breakdown">
+                    <button type="button" class="help-icon-button" aria-label="Task status breakdown" data-tip="Task status breakdown">
                         <svg class="help-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -4218,19 +4254,19 @@ function renderMobileDashboard() {
                     </button>
                 </div>
                 <div class="metric-row">
-                    <div class="metric-compact" title="Tasks currently being worked on">
+                    <div class="metric-compact" data-tip="Tasks currently being worked on">
                         <div class="metric-value-sm">${metrics.inProgress}</div>
                         <div class="metric-label-sm">Active</div>
                     </div>
-                    <div class="metric-compact ${metrics.blocked > 0 ? 'danger' : ''}" title="Tasks blocked or requiring attention">
+                    <div class="metric-compact ${metrics.blocked > 0 ? 'danger' : ''}" data-tip="Tasks blocked or requiring attention">
                         <div class="metric-value-sm">${metrics.blocked}</div>
                         <div class="metric-label-sm">Blocked</div>
                     </div>
-                    <div class="metric-compact ${metrics.overdue > 0 ? 'warning' : ''}" title="Tasks past their due date">
+                    <div class="metric-compact ${metrics.overdue > 0 ? 'warning' : ''}" data-tip="Tasks past their due date">
                         <div class="metric-value-sm">${metrics.overdue}</div>
                         <div class="metric-label-sm">Overdue</div>
                     </div>
-                    <div class="metric-compact success" title="Completed tasks">
+                    <div class="metric-compact success" data-tip="Completed tasks">
                         <div class="metric-value-sm">${metrics.completed}</div>
                         <div class="metric-label-sm">Done</div>
                     </div>
@@ -4269,15 +4305,15 @@ function renderMobileDashboard() {
                 </div>
                 <div class="card-content">
                     <div class="quick-nav-grid">
-                        <button class="quick-nav-btn" data-action="navigate" data-section="timeline" title="Jump to visual sprint timeline">
+                        <button class="quick-nav-btn" data-action="navigate" data-section="timeline" data-tip="Jump to visual sprint timeline">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line></svg>
                             <span>Timeline</span>
                         </button>
-                        <button class="quick-nav-btn" data-action="navigate" data-section="tasks" title="View and manage all tasks">
+                        <button class="quick-nav-btn" data-action="navigate" data-section="tasks" data-tip="View and manage all tasks">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
                             <span>Tasks</span>
                         </button>
-                        <button class="quick-nav-btn" data-action="navigate" data-section="bandwidth" title="Check team capacity & load">
+                        <button class="quick-nav-btn" data-action="navigate" data-section="bandwidth" data-tip="Check team capacity & load">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                             <span>Capacity</span>
                         </button>
@@ -4534,7 +4570,7 @@ function renderMobileTasks() {
                         ${statusPriority.map(status => {
                             const count = statusCounts[status] || 0;
                             if (count === 0) return '';
-                            return `<span class="status-icon-pill status-${status}" style="--status-color: ${statusColors[status]}" title="${status}: ${count} tasks">
+                            return `<span class="status-icon-pill status-${status}" style="--status-color: ${statusColors[status]}" data-tip="${status}: ${count} tasks">
                                 <span class="status-count">${count}</span>
                             </span>`;
                         }).join('')}
@@ -4822,7 +4858,7 @@ function renderMobileTimeline() {
                                                         data-tasks="${day.taskCount}"
                                                         role="gridcell"
                                                         aria-label="${monthShort} ${day.dayNum}: ${day.isWeekend ? 'Weekend' : `${day.taskCount} task${day.taskCount !== 1 ? 's' : ''}`}"
-                                                        title="${monthShort} ${day.dayNum}: ${day.taskCount} task${day.taskCount !== 1 ? 's' : ''}">
+                                                        data-tip="${monthShort} ${day.dayNum}: ${day.taskCount} task${day.taskCount !== 1 ? 's' : ''}">
                                                         <span class="day-date">${day.dayNum}</span>
                                                     </div>
                                                 `;
@@ -5784,7 +5820,7 @@ function showMemberProfile(memberId) {
                     const level = wkend ? 0 : ratio === 0 ? 0 : ratio <= 0.4 ? 1 : ratio <= 0.7 ? 2 : ratio <= 1 ? 3 : 4;
                     const isToday = d === todayStr;
                     return `<div class="heatmap-day level-${level} ${isToday ? 'is-today' : ''} ${wkend ? 'is-weekend' : ''}" 
-                        title="${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${wkend ? 'Weekend' : `${allocated.toFixed(1)}h / ${hoursPerDay}h`}">${dayNum}</div>`;
+                        data-tip="${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${wkend ? 'Weekend' : `${allocated.toFixed(1)}h / ${hoursPerDay}h`}">${dayNum}</div>`;
                 }).join('')}
             </div>
         </div>`;
