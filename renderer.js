@@ -1905,7 +1905,7 @@ function updateDesktopTodayBadge() {
         timeBadge.textContent = now.toLocaleTimeString('en-IN', timeOpts) + ' IST';
     }
     
-    // Auto-update every 30 seconds
+    // Auto-update every 1 seconds
     if (!window._todayBadgeTimer) {
         window._todayBadgeTimer = setInterval(() => {
             const n = new Date();
@@ -1913,7 +1913,7 @@ function updateDesktopTodayBadge() {
                 const tOpts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' };
                 timeBadge.textContent = n.toLocaleTimeString('en-IN', tOpts) + ' IST';
             }
-        }, 30000);
+        }, 1000);
     }
 }
 
