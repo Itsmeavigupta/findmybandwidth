@@ -296,6 +296,7 @@ function normalizeSprintConfig(rawData) {
  *   - capacity (optional): Capacity percentage string
  *   - focus (optional): Current focus area
  *   - bandwidth_hours (optional): Available hours per week (NUMBER), defaults to 40
+ *   - leaves (optional): Comma-separated YYYY-MM-DD dates for leave days (e.g. "2026-02-16,2026-02-17")
  */
 function normalizeMembers(rawData) {
     if (!Array.isArray(rawData)) {
@@ -314,6 +315,12 @@ function normalizeMembers(rawData) {
             40 // Default: 40 hours/week
         );
         
+        // Parse leaves as comma-separated YYYY-MM-DD dates
+        const leavesRaw = sanitizeText(row.leaves || row.Leaves || row.LEAVES || '');
+        const leaves = leavesRaw
+            ? leavesRaw.split(',').map(d => d.trim()).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+            : [];
+
         return {
             id,
             name,
@@ -321,7 +328,8 @@ function normalizeMembers(rawData) {
             colorClass,
             capacity: sanitizeText(row.capacity || row.Capacity || '100%'),
             focus: sanitizeText(row.focus || row.Focus || 'Sprint work'),
-            bandwidthHours // EXPLICIT numeric field - no parsing from text
+            bandwidthHours, // EXPLICIT numeric field - no parsing from text
+            leaves // Array of YYYY-MM-DD date strings when member is on leave
         };
     }).filter(member => member.id && member.name && member.id !== 'member-0');
 }
@@ -828,17 +836,26 @@ function loadFallbackData() {
  * Refresh data
  */
 async function refreshData() {
-    showLoadingIndicator();
+    // Spin the refresh button
+    const refreshBtn = document.querySelector('.desktop-action-btn[aria-label="Refresh data"]');
+    if (refreshBtn) {
+        refreshBtn.classList.add('is-refreshing');
+        refreshBtn.disabled = true;
+    }
+
+    showDesktopSkeleton();
     const success = await loadAllData();
     
     if (success && typeof renderAll === 'function') {
         renderAll();
     }
     
-    // Hide loading indicator after rendering completes
-    setTimeout(() => {
-        hideLoadingIndicator();
-    }, 300);
+    // Fade in content and stop spinner
+    hideDesktopSkeleton();
+    if (refreshBtn) {
+        refreshBtn.classList.remove('is-refreshing');
+        refreshBtn.disabled = false;
+    }
     
     return success;
 }
@@ -881,44 +898,130 @@ function exportData() {
 }
 
 /**
- * Show loading indicator
+ * Show desktop skeleton loading state
+ * Injects shimmer placeholders into the main content area
  */
-function showLoadingIndicator() {
-    // Don't show loading indicator on mobile devices (max-width: 768px)
-    if (window.innerWidth <= 768) {
-        console.log('Skipping loading indicator on mobile');
-        return;
-    }
-    
-    const container = document.querySelector('.container');
-    if (container && !document.getElementById('loading-indicator')) {
-        container.insertAdjacentHTML('afterbegin', `
-            <div id="loading-indicator" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;">
-                <div style="background:white;padding:30px;border-radius:12px;text-align:center;max-width:400px;">
-                    <div style="font-size:3rem;margin-bottom:15px;">📊</div>
-                    <h2 style="margin-bottom:10px;color:#1e293b;">Loading from Google Sheets</h2>
-                    <p style="color:#64748b;margin-bottom:20px;">Fetching latest sprint data...</p>
-                    <div style="width:100%;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;">
-                        <div style="width:60%;height:100%;background:linear-gradient(90deg,#10b981,#059669);animation:loading 1.5s infinite;"></div>
-                    </div>
+function showDesktopSkeleton() {
+    const desktopContent = document.getElementById('desktop-content');
+    if (!desktopContent) return;
+
+    // Hide all real sections
+    desktopContent.querySelectorAll('.desktop-section').forEach(s => {
+        s.style.display = 'none';
+    });
+
+    // Remove any existing skeleton
+    const existing = document.getElementById('desktop-loading-skeleton');
+    if (existing) existing.remove();
+
+    const skeleton = document.createElement('div');
+    skeleton.id = 'desktop-loading-skeleton';
+    skeleton.className = 'desktop-skeleton';
+    skeleton.innerHTML = `
+        <!-- Sprint card skeleton -->
+        <div class="skel-sprint-card">
+            <div class="skel-left">
+                <div class="skeleton-pulse skel-title"></div>
+                <div class="skeleton-pulse skel-subtitle"></div>
+                <div class="skel-pills">
+                    <div class="skeleton-pulse skel-pill"></div>
+                    <div class="skeleton-pulse skel-pill"></div>
+                    <div class="skeleton-pulse skel-pill"></div>
                 </div>
             </div>
-            <style>
-                @keyframes loading {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(250%); }
-                }
-            </style>
-        `);
+            <div class="skel-ring skeleton-pulse"></div>
+        </div>
+
+        <!-- Metrics skeleton -->
+        <div class="skel-metrics">
+            <div class="skel-metric skeleton-pulse"></div>
+            <div class="skel-metric skeleton-pulse"></div>
+            <div class="skel-metric skeleton-pulse"></div>
+            <div class="skel-metric skeleton-pulse"></div>
+        </div>
+
+        <!-- Status bars skeleton -->
+        <div class="skel-card">
+            <div class="skeleton-pulse skel-card-title"></div>
+            <div class="skel-bars">
+                <div class="skeleton-pulse skel-bar-row"></div>
+                <div class="skeleton-pulse skel-bar-row"></div>
+                <div class="skeleton-pulse skel-bar-row"></div>
+                <div class="skeleton-pulse skel-bar-row short"></div>
+            </div>
+        </div>
+
+        <!-- Two-column skeleton -->
+        <div class="skel-two-col">
+            <div class="skel-card">
+                <div class="skeleton-pulse skel-card-title"></div>
+                <div class="skel-team">
+                    <div class="skel-member"><div class="skeleton-pulse skel-avatar"></div><div class="skel-member-lines"><div class="skeleton-pulse skel-line"></div><div class="skeleton-pulse skel-line short"></div></div></div>
+                    <div class="skel-member"><div class="skeleton-pulse skel-avatar"></div><div class="skel-member-lines"><div class="skeleton-pulse skel-line"></div><div class="skeleton-pulse skel-line short"></div></div></div>
+                    <div class="skel-member"><div class="skeleton-pulse skel-avatar"></div><div class="skel-member-lines"><div class="skeleton-pulse skel-line"></div><div class="skeleton-pulse skel-line short"></div></div></div>
+                </div>
+            </div>
+            <div class="skel-card">
+                <div class="skeleton-pulse skel-card-title"></div>
+                <div class="skeleton-pulse skel-bar-wide"></div>
+                <div class="skel-bw-grid">
+                    <div class="skeleton-pulse skel-bw-item"></div>
+                    <div class="skeleton-pulse skel-bw-item"></div>
+                    <div class="skeleton-pulse skel-bw-item"></div>
+                    <div class="skeleton-pulse skel-bw-item"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    desktopContent.prepend(skeleton);
+}
+
+/**
+ * Hide desktop skeleton and reveal real content with a fade-in
+ */
+function hideDesktopSkeleton() {
+    const skeleton = document.getElementById('desktop-loading-skeleton');
+    if (skeleton) {
+        skeleton.classList.add('skeleton-fade-out');
+        skeleton.addEventListener('animationend', () => skeleton.remove(), { once: true });
+        // Fallback removal
+        setTimeout(() => { if (skeleton.parentNode) skeleton.remove(); }, 400);
+    }
+
+    // Show all real sections (restore active visibility)
+    const desktopContent = document.getElementById('desktop-content');
+    if (desktopContent) {
+        desktopContent.querySelectorAll('.desktop-section').forEach(s => {
+            s.style.display = '';
+        });
+        // Add a fade-in class to the content
+        desktopContent.classList.add('content-loaded');
     }
 }
 
 /**
- * Hide loading indicator
+ * Legacy loading indicator (kept for compatibility)
+ */
+function showLoadingIndicator() {
+    if (window.innerWidth > 768) {
+        showDesktopSkeleton();
+        return;
+    }
+    // Mobile: show mobile skeleton
+    const mobileSkeleton = document.getElementById('mobile-loading');
+    if (mobileSkeleton) mobileSkeleton.style.display = '';
+}
+
+/**
+ * Legacy hide loading indicator
  */
 function hideLoadingIndicator() {
-    const indicator = document.getElementById('loading-indicator');
-    if (indicator) indicator.remove();
+    if (window.innerWidth > 768) {
+        hideDesktopSkeleton();
+        return;
+    }
+    const mobileSkeleton = document.getElementById('mobile-loading');
+    if (mobileSkeleton) mobileSkeleton.style.display = 'none';
 }
 
 /**
@@ -960,7 +1063,7 @@ function showError(message) {
 // =============================================
 if (typeof window !== 'undefined') {
     window.addEventListener('DOMContentLoaded', async () => {
-        showLoadingIndicator();
+        showDesktopSkeleton();
         const success = await loadAllData();
         
         // Render the UI after data loads
@@ -968,11 +1071,8 @@ if (typeof window !== 'undefined') {
             renderAll();
         }
         
-        // Hide loading indicator after rendering completes
-        // Small delay to ensure DOM updates are visible
-        setTimeout(() => {
-            hideLoadingIndicator();
-        }, 300);
+        // Reveal real content
+        hideDesktopSkeleton();
     });
     
     // Expose functions globally for HTML button access

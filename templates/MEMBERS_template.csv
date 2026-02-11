@@ -1,6 +1,6 @@
-id,name,role,bandwidth_hours,capacity,focus,color_class
-avi,"Avi Gupta","Full Stack Developer",40,100%,"UI Revamp & PWA Development",primary
-vinit,"Vinit Sharma","Product Manager",40,100%,"Requirements & Stakeholder Management",success
-anup,"Anup Kumar","Senior Developer",40,100%,"Backend APIs & Integration",info
-priya,"Priya Singh","UI/UX Designer",32,80%,"Design System & User Research",warning
-rahul,"Rahul Verma","QA Engineer",40,100%,"Testing & Quality Assurance",danger
+id,name,role,bandwidth_hours,capacity,focus,color_class,leaves
+avi,"Avi Gupta","Full Stack Developer",40,100%,"UI Revamp & PWA Development",primary,"2026-02-16,2026-02-17"
+vinit,"Vinit Sharma","Product Manager",40,100%,"Requirements & Stakeholder Management",success,
+anup,"Anup Kumar","Senior Developer",40,100%,"Backend APIs & Integration",info,
+priya,"Priya Singh","UI/UX Designer",32,80%,"Design System & User Research",warning,"2026-02-20"
+rahul,"Rahul Verma","QA Engineer",40,100%,"Testing & Quality Assurance",danger,

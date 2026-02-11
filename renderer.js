@@ -592,7 +592,17 @@ function renderHeader() {
     sprintDatesEl.textContent = sprintDates;
     headerProgressEl.textContent = `${progressPercent}%`;
     headerCapacityEl.textContent = `${Math.round(teamRemainingBandwidth)}h`;
-}function renderTeamOverview() {
+    
+    // Update header progress bar
+    const headerProgressBar = document.getElementById('header-progress-bar');
+    if (headerProgressBar) {
+        headerProgressBar.style.width = `${progressPercent}%`;
+        headerProgressBar.style.background = progressPercent >= 80 ? 'var(--success)' : 
+                                             progressPercent >= 40 ? 'var(--primary)' : 'var(--warning)';
+    }
+}
+
+function renderTeamOverview() {
     if (!appData.teamMembers || appData.teamMembers.length === 0) return;
     
     const tbody = document.querySelector('.section table tbody');
@@ -692,7 +702,27 @@ function renderGanttChart() {
     const ganttContainer = document.querySelector('.gantt-container');
     if (!ganttContainer) return;
     
-    const filteredTasks = getFilteredTasks();
+    // Use Gantt-specific filters if available, else show all tasks
+    const ganttOwnerFilter = document.getElementById('gantt-filter-owner')?.value || 'all';
+    const ganttStatusFilter = document.getElementById('gantt-filter-status')?.value || 'all';
+    const ganttPriorityFilter = document.getElementById('gantt-filter-priority')?.value || 'all';
+    
+    let filteredTasks = [...(appData.tasks || [])];
+    
+    if (ganttOwnerFilter !== 'all') {
+        filteredTasks = filteredTasks.filter(t => t.owner === ganttOwnerFilter || t.owner === 'both');
+    }
+    if (ganttStatusFilter !== 'all') {
+        filteredTasks = filteredTasks.filter(t => {
+            if (t.completed && ganttStatusFilter === 'completed') return true;
+            if (t.completed && ganttStatusFilter !== 'completed') return false;
+            const taskStatus = normalizeTaskStatus(t.status);
+            return taskStatus === ganttStatusFilter;
+        });
+    }
+    if (ganttPriorityFilter !== 'all') {
+        filteredTasks = filteredTasks.filter(t => t.priority === ganttPriorityFilter);
+    }
     const dateCount = dates.length;
     const today = getTodayLocalDate(); // Use canonical local date
     
@@ -806,7 +836,12 @@ function renderGanttChart() {
                 
                 // Render task bar if this date is within the visible task range
                 if (index >= visibleStartIndex && index <= visibleEndIndex && visibleStartIndex !== -1 && visibleEndIndex !== -1) {
-                    const barClass = task.priority === 'urgent' ? 'bar-urgent' : 
+                    // Status-based bar coloring
+                    const barClass = task.completed ? 'bar-completed' :
+                                   (task.status && task.status.toLowerCase().includes('blocked')) ? 'bar-blocked' :
+                                   (task.status && task.status.toLowerCase().includes('progress')) ? 'bar-in-progress' :
+                                   (task.status && task.status.toLowerCase().includes('review')) ? 'bar-review' :
+                                   task.priority === 'urgent' ? 'bar-urgent' : 
                                    task.priority === 'low' ? 'bar-low' :
                                    member ? `bar-${member.colorClass}` : 'bar-primary';
                     
@@ -855,6 +890,12 @@ function renderGanttChart() {
     
     // Single DOM update for better performance
     ganttContainer.innerHTML = ganttParts.join('');
+}
+
+// Helper function to get team member by id
+function getTeamMember(ownerId) {
+    if (!appData.teamMembers || !ownerId) return null;
+    return appData.teamMembers.find(m => m.id === ownerId || m.name === ownerId) || null;
 }
 
 // Helper function to get status styling
@@ -1014,6 +1055,9 @@ function renderAll() {
     // Initialize mobile UI if on mobile device (handles all mobile setup)
     initializeMobileUI();
     
+    // Initialize modern desktop UI
+    initializeDesktopUI();
+    
     // Check if we should use virtual scrolling (for large datasets)
     const shouldUseVirtualScrolling = appData.tasks && appData.tasks.length > 30;
     if (shouldUseVirtualScrolling) {
@@ -1029,37 +1073,2121 @@ function renderAll() {
     renderAllTaskCards();
     renderMilestones();
     updateLegend();
+    
+    // Render desktop-specific content
+    renderDesktopUI();
+}
+
+// =============================================
+// MODERN DESKTOP UI FUNCTIONS
+// =============================================
+
+let desktopState = {
+    taskView: 'grid', // 'grid' or 'list'
+    taskSort: { field: 'name', direction: 'asc' },
+    activePanel: null,
+    commandPaletteOpen: false,
+    initialized: false
+};
+
+function initializeDesktopUI() {
+    // Only initialize on desktop
+    if (window.innerWidth < 769) return;
+    if (desktopState.initialized) return;
+    desktopState.initialized = true;
+    
+    // Initialize dark mode from localStorage
+    initializeDarkMode();
+    
+    // Initialize sidebar navigation
+    initializeDesktopSidebar();
+    
+    // Initialize desktop section navigation
+    initializeDesktopNavigation();
+    
+    // Initialize desktop search
+    initializeDesktopSearch();
+    
+    // Initialize desktop filters
+    initializeDesktopFilters();
+    
+    // Initialize Gantt chart filters
+    initializeGanttFilters();
+    
+    // Initialize task view toggle
+    initializeTaskViewToggle();
+    
+    // Initialize task detail panel
+    initializeTaskPanel();
+    
+    // Initialize command palette
+    initializeCommandPalette();
+    
+    // Initialize print handler
+    initializePrintHandler();
+    
+    // Initialize v3 features (notifications, FAB, auto-refresh, etc.)
+    initializeV3Features();
+}
+
+// =============================================
+// PRINT HANDLER
+// =============================================
+
+function initializePrintHandler() {
+    // Override window.print to set date and show all sections
+    const originalPrint = window.print.bind(window);
+    window.printReport = function() {
+        // Set print date on header
+        const header = document.querySelector('.desktop-header');
+        if (header) {
+            const today = new Date();
+            header.setAttribute('data-print-date', today.toLocaleDateString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            }));
+        }
+        
+        // Temporarily expand all sections for printing
+        const sections = document.querySelectorAll('.desktop-section');
+        const activeSection = document.querySelector('.desktop-section.active');
+        sections.forEach(s => s.classList.add('active'));
+        
+        // Print
+        originalPrint();
+        
+        // Restore after print
+        setTimeout(() => {
+            sections.forEach(s => s.classList.remove('active'));
+            if (activeSection) activeSection.classList.add('active');
+        }, 500);
+    };
+}
+
+// =============================================
+// DARK MODE
+// =============================================
+
+function initializeDarkMode() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('fmb-theme');
+    
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('fmb-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('fmb-theme', 'dark');
+            }
+        });
+    }
+}
+
+// =============================================
+// SIDEBAR & NAVIGATION
+// =============================================
+
+function initializeDesktopSidebar() {
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('desktop-sidebar');
+    
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+    }
+}
+
+function initializeDesktopNavigation() {
+    const navItems = document.querySelectorAll('.sidebar-nav-item');
+    const sections = document.querySelectorAll('.desktop-section');
+    const pageTitle = document.getElementById('desktop-page-title');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const sectionName = item.dataset.section;
+            navigateToSection(sectionName);
+        });
+    });
+}
+
+function navigateToSection(sectionName) {
+    const navItems = document.querySelectorAll('.sidebar-nav-item');
+    const sections = document.querySelectorAll('.desktop-section');
+    const pageTitle = document.getElementById('desktop-page-title');
+    
+    // Update active nav item
+    navItems.forEach(nav => nav.classList.remove('active'));
+    const activeNav = document.querySelector(`.sidebar-nav-item[data-section="${sectionName}"]`);
+    if (activeNav) activeNav.classList.add('active');
+    
+    // Show corresponding section
+    sections.forEach(section => {
+        section.classList.remove('active');
+        if (section.dataset.section === sectionName) {
+            section.classList.add('active');
+        }
+    });
+    
+    // Update page title
+    if (pageTitle) {
+        const titles = {
+            'dashboard': 'Dashboard',
+            'tasks': 'Tasks',
+            'timeline': 'Timeline',
+            'bandwidth': 'Capacity',
+            'milestones': 'Milestones',
+            'calendar': 'Sprint Calendar'
+        };
+        pageTitle.textContent = titles[sectionName] || 'Dashboard';
+    }
+}
+
+// =============================================
+// SEARCH
+// =============================================
+
+function initializeDesktopSearch() {
+    const searchInput = document.getElementById('desktop-search');
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', debounce((e) => {
+        const query = e.target.value.toLowerCase();
+        filterDesktopContent(query);
+    }, 300));
+}
+
+function filterDesktopContent(query) {
+    if (!query) {
+        renderDesktopTasksView();
+        return;
+    }
+    
+    const filteredTasks = appData.tasks.filter(task => {
+        return task.name.toLowerCase().includes(query) ||
+               (task.owner && task.owner.toLowerCase().includes(query)) ||
+               (task.status && task.status.toLowerCase().includes(query)) ||
+               (task.jiraId && task.jiraId.toLowerCase().includes(query)) ||
+               (task.notes && task.notes.toLowerCase().includes(query));
+    });
+    
+    renderDesktopTasksGrid(filteredTasks);
+    renderDesktopTasksList(filteredTasks);
+}
+
+// =============================================
+// FILTERS
+// =============================================
+
+function initializeDesktopFilters() {
+    const ownerFilter = document.getElementById('desktop-filter-owner');
+    const statusFilter = document.getElementById('desktop-filter-status');
+    const priorityFilter = document.getElementById('desktop-filter-priority');
+    const hideCompletedCheckbox = document.getElementById('desktop-hide-completed');
+    
+    // Populate owner filter
+    if (ownerFilter && appData.teamMembers) {
+        const options = appData.teamMembers.map(m => 
+            `<option value="${m.id}">${m.name}</option>`
+        ).join('');
+        ownerFilter.innerHTML = `<option value="all">All Owners</option>${options}`;
+    }
+    
+    // Add event listeners
+    [ownerFilter, statusFilter, priorityFilter].forEach(filter => {
+        if (filter) {
+            filter.addEventListener('change', () => applyDesktopFilters());
+        }
+    });
+    
+    if (hideCompletedCheckbox) {
+        hideCompletedCheckbox.addEventListener('change', () => applyDesktopFilters());
+    }
+}
+
+function applyDesktopFilters() {
+    const ownerFilter = document.getElementById('desktop-filter-owner')?.value || 'all';
+    const statusFilter = document.getElementById('desktop-filter-status')?.value || 'all';
+    const priorityFilter = document.getElementById('desktop-filter-priority')?.value || 'all';
+    const hideCompleted = document.getElementById('desktop-hide-completed')?.checked || false;
+    
+    let filteredTasks = [...(appData.tasks || [])];
+    
+    if (ownerFilter !== 'all') {
+        filteredTasks = filteredTasks.filter(t => t.owner === ownerFilter);
+    }
+    
+    if (statusFilter !== 'all') {
+        filteredTasks = filteredTasks.filter(t => {
+            const taskStatus = normalizeTaskStatus(t.status);
+            return taskStatus === statusFilter;
+        });
+    }
+    
+    if (priorityFilter !== 'all') {
+        filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter);
+    }
+    
+    if (hideCompleted) {
+        filteredTasks = filteredTasks.filter(t => !t.completed);
+    }
+    
+    renderDesktopTasksGrid(filteredTasks);
+    renderDesktopTasksList(filteredTasks);
+}
+
+// =============================================
+// GANTT CHART FILTERS
+// =============================================
+
+function initializeGanttFilters() {
+    const ganttOwnerFilter = document.getElementById('gantt-filter-owner');
+    const ganttStatusFilter = document.getElementById('gantt-filter-status');
+    const ganttPriorityFilter = document.getElementById('gantt-filter-priority');
+    const ganttResetBtn = document.getElementById('gantt-filter-reset');
+    
+    // Populate owner filter
+    if (ganttOwnerFilter && appData.teamMembers) {
+        const options = appData.teamMembers.map(m => 
+            `<option value="${m.id}">${m.name}</option>`
+        ).join('');
+        ganttOwnerFilter.innerHTML = `<option value="all">All Owners</option>${options}`;
+    }
+    
+    // Add event listeners
+    [ganttOwnerFilter, ganttStatusFilter, ganttPriorityFilter].forEach(filter => {
+        if (filter) {
+            filter.addEventListener('change', () => renderGanttChart());
+        }
+    });
+    
+    // Reset button
+    if (ganttResetBtn) {
+        ganttResetBtn.addEventListener('click', () => {
+            if (ganttOwnerFilter) ganttOwnerFilter.value = 'all';
+            if (ganttStatusFilter) ganttStatusFilter.value = 'all';
+            if (ganttPriorityFilter) ganttPriorityFilter.value = 'all';
+            renderGanttChart();
+        });
+    }
+}
+
+// =============================================
+// TASK VIEW TOGGLE (Grid / List)
+// =============================================
+
+function initializeTaskViewToggle() {
+    const toggleBtns = document.querySelectorAll('.view-toggle-btn');
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+            desktopState.taskView = view;
+            
+            toggleBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const gridContainer = document.getElementById('desktop-tasks-grid');
+            const listContainer = document.getElementById('desktop-tasks-list');
+            
+            if (view === 'grid') {
+                if (gridContainer) gridContainer.style.display = '';
+                if (listContainer) listContainer.style.display = 'none';
+            } else {
+                if (gridContainer) gridContainer.style.display = 'none';
+                if (listContainer) listContainer.style.display = '';
+            }
+        });
+    });
+}
+
+// =============================================
+// TASK DETAIL SLIDE-OVER PANEL
+// =============================================
+
+function initializeTaskPanel() {
+    const overlay = document.getElementById('desktop-task-panel-overlay');
+    const closeBtn = document.getElementById('task-panel-close-btn');
+    
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeTaskPanel();
+        });
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeTaskPanel);
+    }
+    
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && desktopState.activePanel) {
+            closeTaskPanel();
+        }
+    });
+}
+
+function showDesktopTaskDetail(taskId) {
+    if (window.innerWidth < 769) {
+        // On mobile, use the mobile task detail
+        const task = appData.tasks.find(t => String(t.id) === String(taskId));
+        if (task && typeof showTaskDetails === 'function') {
+            showTaskDetails(taskId);
+        }
+        return;
+    }
+    
+    const task = appData.tasks.find(t => String(t.id) === String(taskId));
+    if (!task) return;
+    
+    desktopState.activePanel = taskId;
+    
+    const overlay = document.getElementById('desktop-task-panel-overlay');
+    const headerEl = document.getElementById('task-panel-header');
+    const bodyEl = document.getElementById('task-panel-body');
+    const jiraBtn = document.getElementById('task-panel-jira-btn');
+    
+    const statusInfo = getStatusInfo(task.status, task.completed);
+    const member = getTeamMember(task.owner);
+    const ownerName = member ? member.name : (task.owner || 'Unassigned');
+    const normalizedStatus = normalizeTaskStatus(task.status);
+    
+    const priorityColors = {
+        'urgent': '#ef4444',
+        'normal': '#3b82f6',
+        'low': '#6b7280'
+    };
+    
+    const statusBadgeColors = {
+        'success': 'background: #d1fae5; color: #047857;',
+        'warning': 'background: #fef3c7; color: #b45309;',
+        'danger': 'background: #fee2e2; color: #dc2626;',
+        'info': 'background: #cffafe; color: #0891b2;',
+        'secondary': 'background: #e5e7eb; color: #4b5563;',
+        'muted': 'background: #f3f4f6; color: #6b7280;'
+    };
+    
+    const badgeStyle = statusBadgeColors[statusInfo.color] || statusBadgeColors.secondary;
+    const prioColor = priorityColors[task.priority] || '#6b7280';
+    
+    // Calculate time progress
+    let timeProgress = 0;
+    let timeLabel = '';
+    if (task.startDate && task.endDate) {
+        const today = new Date(getTodayLocalDate() + 'T00:00:00');
+        const start = new Date(task.startDate + 'T00:00:00');
+        const end = new Date(task.endDate + 'T00:00:00');
+        const totalDays = Math.max(1, (end - start) / (1000 * 60 * 60 * 24));
+        const elapsed = Math.max(0, (today - start) / (1000 * 60 * 60 * 24));
+        timeProgress = Math.min(100, Math.round((elapsed / totalDays) * 100));
+        
+        if (today < start) timeLabel = 'Not started';
+        else if (today > end) timeLabel = 'Overdue';
+        else timeLabel = `${Math.round(elapsed)} of ${Math.round(totalDays)} days elapsed`;
+    }
+    
+    // Header
+    headerEl.innerHTML = `
+        <div class="task-panel-header-top">
+            <div class="task-panel-badges">
+                <span class="task-panel-badge" style="${badgeStyle}">${statusInfo.label}</span>
+                <span class="task-panel-badge" style="background: ${prioColor}15; color: ${prioColor};">${escapeHtml(task.priority || 'normal')}</span>
+                ${task.type ? `<span class="task-panel-badge" style="background: var(--badge-bg); color: var(--badge-text);">${escapeHtml(task.type)}</span>` : ''}
+            </div>
+            <button class="task-panel-close" onclick="closeTaskPanel()" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <h2 class="task-panel-title">${escapeHtml(task.name)}</h2>
+    `;
+    
+    // Body
+    bodyEl.innerHTML = `
+        <div class="task-panel-section">
+            <h4 class="task-panel-section-title">Details</h4>
+            <div class="task-panel-info-grid">
+                <div class="task-panel-info-item">
+                    <span class="task-panel-info-label">Assignee</span>
+                    <span class="task-panel-info-value">${escapeHtml(ownerName)}</span>
+                </div>
+                <div class="task-panel-info-item">
+                    <span class="task-panel-info-label">Estimated Hours</span>
+                    <span class="task-panel-info-value">${task.estimatedHours || 0}h</span>
+                </div>
+                ${task.startDate ? `
+                <div class="task-panel-info-item">
+                    <span class="task-panel-info-label">Start Date</span>
+                    <span class="task-panel-info-value">${formatDate(task.startDate)}</span>
+                </div>
+                ` : ''}
+                ${task.endDate ? `
+                <div class="task-panel-info-item">
+                    <span class="task-panel-info-label">Due Date</span>
+                    <span class="task-panel-info-value">${formatDate(task.endDate)}</span>
+                </div>
+                ` : ''}
+                ${task.startDate && task.endDate ? `
+                <div class="task-panel-info-item">
+                    <span class="task-panel-info-label">Working Days</span>
+                    <span class="task-panel-info-value">${getWorkingDays(task.startDate, task.endDate)} days</span>
+                </div>
+                ` : ''}
+                ${task.bu ? `
+                <div class="task-panel-info-item">
+                    <span class="task-panel-info-label">Business Unit</span>
+                    <span class="task-panel-info-value">${escapeHtml(task.bu)}</span>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+        
+        ${task.startDate && task.endDate ? `
+        <div class="task-panel-section">
+            <h4 class="task-panel-section-title">Timeline Progress</h4>
+            <div class="task-panel-progress">
+                <div class="task-panel-progress-bar">
+                    <div class="task-panel-progress-fill" style="width: ${timeProgress}%; background: ${timeProgress > 90 && !task.completed ? 'var(--danger)' : 'var(--primary)'};"></div>
+                </div>
+                <div class="task-panel-progress-labels">
+                    <span>${timeLabel}</span>
+                    <span>${timeProgress}%</span>
+                </div>
+            </div>
+        </div>
+        ` : ''}
+        
+        ${task.jiraUrl ? `
+        <div class="task-panel-section">
+            <h4 class="task-panel-section-title">Jira Ticket</h4>
+            <a href="${sanitizeUrl(task.jiraUrl)}" target="_blank" rel="noopener noreferrer" class="task-panel-jira-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span style="flex:1">${escapeHtml(task.jiraId || 'View in Jira')}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
+        </div>
+        ` : task.jiraId ? `
+        <div class="task-panel-section">
+            <h4 class="task-panel-section-title">Jira ID</h4>
+            <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(task.jiraId)}</span>
+        </div>
+        ` : ''}
+        
+        ${task.notes ? `
+        <div class="task-panel-section">
+            <h4 class="task-panel-section-title">Notes</h4>
+            <div class="task-panel-notes">${escapeHtml(task.notes)}</div>
+        </div>
+        ` : ''}
+        
+        ${task.blockers ? `
+        <div class="task-panel-section">
+            <h4 class="task-panel-section-title">Blockers</h4>
+            <div class="task-panel-blockers">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                <span>${escapeHtml(task.blockers)}</span>
+            </div>
+        </div>
+        ` : ''}
+    `;
+    
+    // Jira button
+    if (jiraBtn && task.jiraUrl) {
+        jiraBtn.style.display = 'flex';
+        jiraBtn.onclick = () => window.open(sanitizeUrl(task.jiraUrl), '_blank', 'noopener');
+    } else if (jiraBtn) {
+        jiraBtn.style.display = 'none';
+    }
+    
+    // Show panel
+    if (overlay) overlay.classList.add('active');
+}
+
+function closeTaskPanel() {
+    const overlay = document.getElementById('desktop-task-panel-overlay');
+    if (overlay) overlay.classList.remove('active');
+    desktopState.activePanel = null;
+}
+
+// =============================================
+// COMMAND PALETTE (Ctrl+K)
+// =============================================
+
+function initializeCommandPalette() {
+    const overlay = document.getElementById('command-palette-overlay');
+    const input = document.getElementById('command-palette-input');
+    const results = document.getElementById('command-palette-results');
+    
+    if (!overlay || !input) return;
+    
+    // Ctrl+K or Cmd+K to open, also / when not focused on input
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            toggleCommandPalette();
+        }
+        if (e.key === '/' && !desktopState.commandPaletteOpen && 
+            document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            openCommandPalette();
+        }
+        if (e.key === 'Escape' && desktopState.commandPaletteOpen) {
+            closeCommandPalette();
+        }
+    });
+    
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeCommandPalette();
+    });
+    
+    input.addEventListener('input', debounce(() => {
+        renderCommandPaletteResults(input.value);
+    }, 150));
+    
+    // Keyboard navigation in results
+    input.addEventListener('keydown', (e) => {
+        const items = results.querySelectorAll('.command-palette-item');
+        const activeItem = results.querySelector('.command-palette-item.active');
+        let activeIndex = Array.from(items).indexOf(activeItem);
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = Math.min(activeIndex + 1, items.length - 1);
+            items.forEach(i => i.classList.remove('active'));
+            if (items[activeIndex]) items[activeIndex].classList.add('active');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = Math.max(activeIndex - 1, 0);
+            items.forEach(i => i.classList.remove('active'));
+            if (items[activeIndex]) items[activeIndex].classList.add('active');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeItem) activeItem.click();
+        }
+    });
+}
+
+function toggleCommandPalette() {
+    if (desktopState.commandPaletteOpen) {
+        closeCommandPalette();
+    } else {
+        openCommandPalette();
+    }
+}
+
+function openCommandPalette() {
+    const overlay = document.getElementById('command-palette-overlay');
+    const input = document.getElementById('command-palette-input');
+    if (!overlay) return;
+    
+    desktopState.commandPaletteOpen = true;
+    overlay.classList.add('active');
+    
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 50);
+    }
+    
+    renderCommandPaletteResults('');
+}
+
+function closeCommandPalette() {
+    const overlay = document.getElementById('command-palette-overlay');
+    if (!overlay) return;
+    
+    desktopState.commandPaletteOpen = false;
+    overlay.classList.remove('active');
+}
+
+function renderCommandPaletteResults(query) {
+    const results = document.getElementById('command-palette-results');
+    if (!results) return;
+    
+    const items = [];
+    const q = query.toLowerCase().trim();
+    
+    // Navigation commands
+    const navSections = [
+        { section: 'dashboard', label: 'Go to Dashboard', icon: 'dashboard' },
+        { section: 'tasks', label: 'Go to Tasks', icon: 'tasks' },
+        { section: 'timeline', label: 'Go to Timeline', icon: 'chart' },
+        { section: 'bandwidth', label: 'Go to Capacity', icon: 'chart' },
+        { section: 'milestones', label: 'Go to Milestones', icon: 'milestone' },
+        { section: 'calendar', label: 'Go to Calendar', icon: 'calendar' }
+    ];
+    
+    if (!q) {
+        // Show navigation + recent tasks
+        navSections.forEach(nav => {
+            items.push({
+                type: 'nav',
+                title: nav.label,
+                subtitle: 'Navigation',
+                section: nav.section,
+                badge: '→'
+            });
+        });
+        
+        // Show quick actions
+        items.push({ type: 'action', title: 'Toggle Dark Mode', subtitle: 'Theme', action: 'toggleTheme', badge: '🌓' });
+        items.push({ type: 'action', title: 'Refresh Data', subtitle: 'Action', action: 'refresh', badge: '↻' });
+    } else {
+        // Filter navigation
+        navSections.forEach(nav => {
+            if (nav.label.toLowerCase().includes(q) || nav.section.includes(q)) {
+                items.push({ type: 'nav', title: nav.label, subtitle: 'Navigation', section: nav.section, badge: '→' });
+            }
+        });
+        
+        // Search tasks
+        if (appData.tasks) {
+            appData.tasks.filter(t => 
+                t.name.toLowerCase().includes(q) ||
+                (t.owner && t.owner.toLowerCase().includes(q)) ||
+                (t.jiraId && t.jiraId.toLowerCase().includes(q))
+            ).slice(0, 8).forEach(task => {
+                const member = getTeamMember(task.owner);
+                const ownerName = member ? member.name : (task.owner || 'Unassigned');
+                items.push({
+                    type: 'task',
+                    title: task.name,
+                    subtitle: `${ownerName} • ${task.status || 'todo'}`,
+                    taskId: task.id,
+                    badge: task.jiraId || ''
+                });
+            });
+        }
+        
+        // Search members
+        if (appData.teamMembers) {
+            appData.teamMembers.filter(m => 
+                m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q)
+            ).forEach(member => {
+                items.push({
+                    type: 'member',
+                    title: member.name,
+                    subtitle: member.role,
+                    memberId: member.id,
+                    badge: member.capacity
+                });
+            });
+        }
+        
+        // Search milestones
+        if (appData.milestones) {
+            appData.milestones.filter(m => m.title.toLowerCase().includes(q)).forEach(ms => {
+                items.push({
+                    type: 'milestone',
+                    title: ms.title,
+                    subtitle: `${formatDate(ms.date)} • ${ms.status}`,
+                    badge: `${ms.progress}%`
+                });
+            });
+        }
+        
+        // Theme toggle
+        if ('dark mode'.includes(q) || 'theme'.includes(q) || 'light mode'.includes(q)) {
+            items.push({ type: 'action', title: 'Toggle Dark Mode', subtitle: 'Theme', action: 'toggleTheme', badge: '🌓' });
+        }
+    }
+    
+    if (items.length === 0) {
+        results.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No results found</div>`;
+        return;
+    }
+    
+    results.innerHTML = items.map((item, idx) => `
+        <div class="command-palette-item ${idx === 0 ? 'active' : ''}" data-type="${item.type}" data-section="${item.section || ''}" data-task-id="${item.taskId || ''}" data-action="${item.action || ''}">
+            <div class="command-palette-item-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${item.type === 'task' ? '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>' : 
+                      item.type === 'member' ? '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>' : 
+                      item.type === 'milestone' ? '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>' :
+                      item.type === 'nav' ? '<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>' :
+                      '<circle cx="12" cy="12" r="5"></circle>'}
+                </svg>
+            </div>
+            <div class="command-palette-item-content">
+                <div class="command-palette-item-title">${escapeHtml(item.title)}</div>
+                <div class="command-palette-item-subtitle">${escapeHtml(item.subtitle)}</div>
+            </div>
+            ${item.badge ? `<span class="command-palette-item-badge">${escapeHtml(item.badge)}</span>` : ''}
+        </div>
+    `).join('');
+    
+    // Add click handlers
+    results.querySelectorAll('.command-palette-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const type = el.dataset.type;
+            
+            if (type === 'nav') {
+                navigateToSection(el.dataset.section);
+            } else if (type === 'task') {
+                navigateToSection('tasks');
+                setTimeout(() => showDesktopTaskDetail(el.dataset.taskId), 100);
+            } else if (type === 'member') {
+                navigateToSection('bandwidth');
+            } else if (type === 'action') {
+                const action = el.dataset.action;
+                if (action === 'toggleTheme') {
+                    document.getElementById('theme-toggle')?.click();
+                } else if (action === 'refresh') {
+                    if (typeof refreshData === 'function') refreshData();
+                }
+            }
+            
+            closeCommandPalette();
+        });
+    });
+}
+
+// =============================================
+// RENDER DESKTOP UI
+// =============================================
+
+function renderDesktopUI() {
+    if (window.innerWidth < 769) return;
+    
+    renderDesktopSprintCard();
+    renderDesktopMetrics();
+    renderDesktopStatusBars();
+    renderDesktopTeamList();
+    renderDesktopBandwidthOverview();
+    renderDesktopTasksView();
+    renderDesktopBandwidthGrid();
+    renderDesktopMilestones();
+    renderDesktopBurndownMini();
+    renderDesktopSprintCalendar();
+    renderTeamAvailability();
+    renderDesktopWeeklyBreakdown();
+    updateDesktopSidebarStatus();
+    updateDesktopTodayBadge();
+    updateGoogleSheetLink();
+    
+    // V3 post-render: notifications, heat glow, animations, breadcrumb
+    postRenderV3();
+}
+
+function updateDesktopTodayBadge() {
+    const badge = document.getElementById('today-date-text');
+    if (!badge) return;
+    
+    const today = new Date(getTodayLocalDate() + 'T00:00:00');
+    const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    badge.textContent = today.toLocaleDateString('en-US', options);
+}
+
+function updateGoogleSheetLink() {
+    const link = document.getElementById('sidebar-sheet-link');
+    if (!link) return;
+    
+    // Get the sheet ID from config (defined in dataLoader.js)
+    const sheetId = typeof GOOGLE_SHEETS_CONFIG !== 'undefined' ? GOOGLE_SHEETS_CONFIG.sheetId : null;
+    if (sheetId) {
+        link.href = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+    } else {
+        link.href = '#';
+        link.title = 'Google Sheet not configured';
+    }
+}
+
+function updateDesktopSidebarStatus() {
+    const statusBadge = document.getElementById('sidebar-sprint-status');
+    if (!statusBadge || !appData.project) return;
+    
+    const timeState = getSprintTimeState();
+    if (timeState.isComplete) {
+        statusBadge.textContent = 'Completed';
+        statusBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+        statusBadge.style.color = '#10b981';
+    } else if (timeState.isNotStarted) {
+        statusBadge.textContent = 'Planning';
+        statusBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+        statusBadge.style.color = '#f59e0b';
+    } else {
+        statusBadge.textContent = `Day ${timeState.currentDay}/${timeState.totalWorkingDays}`;
+    }
+    
+    // Update sidebar nav badges
+    updateSidebarNavBadges();
+}
+
+function updateSidebarNavBadges() {
+    const navItems = document.querySelectorAll('.sidebar-nav-item');
+    navItems.forEach(item => {
+        // Remove existing badges
+        const existing = item.querySelector('.nav-badge');
+        if (existing) existing.remove();
+        
+        const section = item.dataset.section;
+        let badge = '';
+        
+        if (section === 'tasks' && appData.tasks) {
+            const blockedCount = appData.tasks.filter(t => 
+                (t.status && t.status.toLowerCase().includes('blocked')) || (t.blockers && t.blockers.trim() !== '')
+            ).length;
+            if (blockedCount > 0) {
+                badge = `<span class="nav-badge">${blockedCount}</span>`;
+            } else {
+                const total = appData.tasks.length;
+                badge = `<span class="nav-badge info">${total}</span>`;
+            }
+        } else if (section === 'milestones' && appData.milestones) {
+            const today = getTodayLocalDate();
+            const overdueCount = appData.milestones.filter(m => {
+                const mDate = new Date(m.date);
+                return mDate < new Date(today) && m.status !== 'completed';
+            }).length;
+            if (overdueCount > 0) {
+                badge = `<span class="nav-badge">${overdueCount}</span>`;
+            }
+        }
+        
+        if (badge) {
+            item.insertAdjacentHTML('beforeend', badge);
+        }
+    });
+}
+
+function renderDesktopSprintCard() {
+    const nameEl = document.getElementById('sprint-name');
+    const datesEl = document.getElementById('sprint-date-range');
+    const progressRing = document.getElementById('sprint-progress-ring');
+    const progressPercent = document.getElementById('sprint-progress-percent');
+    const daysInfo = document.getElementById('sprint-days-info');
+    const remainingInfo = document.getElementById('sprint-remaining-info');
+    const quickStatsEl = document.getElementById('sprint-quick-stats');
+    
+    if (!appData.project) return;
+    
+    const timeState = getSprintTimeState();
+    const totalTasks = appData.tasks ? appData.tasks.length : 0;
+    const completedTasks = appData.tasks ? appData.tasks.filter(t => t.completed).length : 0;
+    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
+    if (nameEl) nameEl.textContent = appData.project.name || 'Sprint Overview';
+    if (datesEl) datesEl.textContent = `${formatDate(appData.project.startDate)} - ${formatDate(appData.project.endDate)}`;
+    
+    if (progressRing) {
+        progressRing.style.strokeDasharray = `${progress}, 100`;
+    }
+    if (progressPercent) progressPercent.textContent = `${progress}%`;
+    
+    if (daysInfo) {
+        if (timeState.isComplete) {
+            daysInfo.textContent = 'Sprint Completed';
+        } else if (timeState.isNotStarted) {
+            daysInfo.textContent = `${timeState.totalWorkingDays} working days`;
+        } else {
+            daysInfo.textContent = `Day ${timeState.currentDay} of ${timeState.totalWorkingDays}`;
+        }
+    }
+    
+    if (remainingInfo) {
+        if (timeState.isComplete) {
+            remainingInfo.textContent = `${completedTasks} of ${totalTasks} tasks completed`;
+        } else {
+            remainingInfo.textContent = `${timeState.remainingWorkingDays} days remaining`;
+        }
+    }
+    
+    // Populate sprint quick stats
+    if (quickStatsEl) {
+        const teamSize = appData.teamMembers ? appData.teamMembers.length : 0;
+        const blockedTasks = appData.tasks ? appData.tasks.filter(t => 
+            (t.status && t.status.toLowerCase().includes('blocked')) || (t.blockers && t.blockers.trim() !== '')
+        ).length : 0;
+        const totalHours = appData.tasks ? appData.tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0) : 0;
+        const milestonesCount = appData.milestones ? appData.milestones.length : 0;
+        
+        quickStatsEl.innerHTML = `
+            <div class="sprint-quick-stat" title="Team members in this sprint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>${teamSize} Members</span>
+            </div>
+            <div class="sprint-quick-stat" title="Total tasks in this sprint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                <span>${totalTasks} Tasks</span>
+            </div>
+            <div class="sprint-quick-stat" title="Total estimated hours across all tasks">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>${totalHours}h Estimated</span>
+            </div>
+            ${blockedTasks > 0 ? `
+                <div class="sprint-quick-stat blocked" title="${blockedTasks} task${blockedTasks !== 1 ? 's' : ''} currently blocked">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <span>${blockedTasks} Blocked</span>
+                </div>
+            ` : ''}
+            ${milestonesCount > 0 ? `
+                <div class="sprint-quick-stat" title="Key milestones to track">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                    <span>${milestonesCount} Milestones</span>
+                </div>
+            ` : ''}
+        `;
+    }
+}
+
+function renderDesktopMetrics() {
+    if (!appData.tasks || !appData.teamMembers) return;
+    
+    const totalTasks = appData.tasks.length;
+    const completedTasks = appData.tasks.filter(task => task.completed).length;
+    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
+    const teamSprintBandwidth = getTeamSprintBandwidth();
+    const totalAllocatedHours = appData.tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+    const utilizationPercent = teamSprintBandwidth > 0 ? 
+        Math.min(Math.round((totalAllocatedHours / teamSprintBandwidth) * 100), 999) : 0;
+    
+    const blockedTasks = appData.tasks.filter(task => 
+        (task.status && task.status.toLowerCase().includes('blocked')) ||
+        (task.blockers && task.blockers.trim() !== '')
+    ).length;
+    
+    const delayedTasks = appData.tasks.filter(task => 
+        task.status && task.status.toLowerCase().includes('delayed')
+    ).length;
+    
+    const overUtilized = utilizationPercent > 100;
+    const riskLevel = blockedTasks > 2 || delayedTasks > 1 || overUtilized ? 'High' : 
+                     blockedTasks > 0 || delayedTasks > 0 || utilizationPercent > 90 ? 'Medium' : 'Low';
+    
+    const progressValue = document.getElementById('sprint-progress-value');
+    const progressSubtitle = document.getElementById('sprint-progress-subtitle');
+    if (progressValue) progressValue.textContent = `${progressPercent}%`;
+    if (progressSubtitle) progressSubtitle.textContent = `${completedTasks} of ${totalTasks} tasks completed`;
+    
+    const utilizationValue = document.getElementById('team-utilization-value');
+    const utilizationSubtitle = document.getElementById('team-utilization-subtitle');
+    if (utilizationValue) utilizationValue.textContent = `${utilizationPercent}%`;
+    if (utilizationSubtitle) utilizationSubtitle.textContent = `${totalAllocatedHours}h / ${teamSprintBandwidth}h capacity`;
+    
+    const riskValue = document.getElementById('risk-indicator-value');
+    const riskSubtitle = document.getElementById('risk-indicator-subtitle');
+    if (riskValue) riskValue.textContent = riskLevel;
+    if (riskSubtitle) {
+        const riskFactors = [];
+        if (blockedTasks > 0) riskFactors.push(`${blockedTasks} blocked`);
+        if (delayedTasks > 0) riskFactors.push(`${delayedTasks} delayed`);
+        if (overUtilized) riskFactors.push('over capacity');
+        riskSubtitle.textContent = riskFactors.length > 0 ? riskFactors.join(', ') : 'No risks identified';
+    }
+}
+
+// =============================================
+// STATUS DISTRIBUTION BARS
+// =============================================
+
+function renderDesktopStatusBars() {
+    const container = document.getElementById('status-bars');
+    if (!container || !appData.tasks) return;
+    
+    const totalTasks = appData.tasks.length;
+    if (totalTasks === 0) return;
+    
+    const statusGroups = {};
+    appData.tasks.forEach(task => {
+        const status = normalizeTaskStatus(task.status, task.completed ? 'completed' : 'todo');
+        statusGroups[status] = (statusGroups[status] || 0) + 1;
+    });
+    
+    const statusOrder = ['in-progress', 'todo', 'blocked', 'review', 'pending', 'completed'];
+    const statusLabels = {
+        'in-progress': 'In Progress',
+        'todo': 'To Do',
+        'blocked': 'Blocked',
+        'review': 'In Review',
+        'pending': 'Pending',
+        'completed': 'Completed'
+    };
+    
+    container.innerHTML = statusOrder
+        .filter(status => statusGroups[status] > 0)
+        .map(status => {
+            const count = statusGroups[status];
+            const percent = Math.round((count / totalTasks) * 100);
+            return `
+                <div class="status-bar-row">
+                    <span class="status-bar-label">${statusLabels[status]}</span>
+                    <div class="status-bar-track">
+                        <div class="status-bar-fill status-${status}" style="width: ${percent}%;">
+                            ${percent > 10 ? `${percent}%` : ''}
+                        </div>
+                    </div>
+                    <span class="status-bar-count">${count}</span>
+                </div>
+            `;
+        }).join('');
+}
+
+// =============================================
+// BURNDOWN MINI CHART
+// =============================================
+
+function renderDesktopBurndownMini() {
+    const container = document.getElementById('burndown-mini');
+    const subtitle = document.getElementById('burndown-subtitle');
+    if (!container || !appData.project || !appData.tasks) return;
+    
+    const timeState = getSprintTimeState();
+    if (!timeState.isValid || timeState.totalWorkingDays === 0) return;
+    
+    const totalTasks = appData.tasks.length;
+    const completedTasks = appData.tasks.filter(t => t.completed).length;
+    const remainingTasks = totalTasks - completedTasks;
+    
+    // Simple burndown - show bars for each "segment" of the sprint
+    const segments = Math.min(timeState.totalWorkingDays, 10); // max 10 bars
+    const segmentSize = timeState.totalWorkingDays / segments;
+    
+    const idealDecrement = totalTasks / segments;
+    
+    let bars = '';
+    for (let i = 0; i < segments; i++) {
+        const idealRemaining = Math.max(0, totalTasks - (idealDecrement * (i + 1)));
+        const idealHeight = totalTasks > 0 ? (idealRemaining / totalTasks) * 100 : 0;
+        
+        const isElapsed = (i + 1) * segmentSize <= timeState.currentDay;
+        const actualRemaining = isElapsed ? 
+            Math.max(0, remainingTasks + (completedTasks * ((segments - i - 1) / segments))) :
+            totalTasks * ((segments - i) / segments);
+        const actualHeight = totalTasks > 0 ? (actualRemaining / totalTasks) * 100 : 0;
+        
+        bars += `<div class="burndown-bar ${isElapsed ? 'completed' : 'ideal'}" style="height: ${isElapsed ? Math.max(actualHeight, 5) : idealHeight}%;"></div>`;
+    }
+    
+    container.innerHTML = `<div class="burndown-mini-chart">${bars}</div>`;
+    
+    if (subtitle) {
+        const velocity = timeState.currentDay > 0 ? (completedTasks / timeState.currentDay).toFixed(1) : 0;
+        subtitle.textContent = `${remainingTasks} tasks remaining • ${velocity} tasks/day`;
+    }
+}
+
+// =============================================
+// TEAM LIST
+// =============================================
+
+function renderDesktopTeamList() {
+    const container = document.getElementById('desktop-team-list');
+    if (!container || !appData.teamMembers) return;
+    
+    const tasksByOwner = {};
+    if (appData.tasks) {
+        appData.tasks.forEach(task => {
+            const owner = task.owner || 'unassigned';
+            if (!tasksByOwner[owner]) tasksByOwner[owner] = [];
+            tasksByOwner[owner].push(task);
+        });
+    }
+    
+    // Update member count badge
+    const memberCountEl = document.getElementById('team-member-count');
+    if (memberCountEl) {
+        memberCountEl.textContent = `${appData.teamMembers.length} member${appData.teamMembers.length !== 1 ? 's' : ''}`;
+    }
+    
+    container.innerHTML = appData.teamMembers.map(member => {
+        const memberTasks = tasksByOwner[member.id] || [];
+        const totalTasks = memberTasks.length;
+        const completedTasks = memberTasks.filter(t => t.completed).length;
+        const activeTasks = memberTasks.filter(t => !t.completed).length;
+        const allocatedHours = memberTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+        const sprintBandwidth = getSprintBandwidth(member);
+        const utilizationPercent = sprintBandwidth > 0 ? Math.min(Math.round((allocatedHours / sprintBandwidth) * 100), 100) : 0;
+        const gradient = getGradientForColorClass(member.colorClass);
+        const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        
+        const barColor = allocatedHours > sprintBandwidth ? 'var(--danger)' : 
+                         allocatedHours > sprintBandwidth * 0.8 ? 'var(--warning)' : 'var(--success)';
+        
+        return `
+            <div class="desktop-team-member" title="${escapeHtml(member.name)}: ${totalTasks} tasks, ${allocatedHours}h allocated of ${sprintBandwidth}h">
+                <div class="team-member-avatar" style="background: ${gradient};">
+                    ${initials}
+                </div>
+                <div class="team-member-info">
+                    <div class="team-member-name">${escapeHtml(member.name)}</div>
+                    <div class="team-member-role">${escapeHtml(member.role || 'Team Member')}</div>
+                    <div class="team-member-workload">
+                        <div class="team-member-workload-bar">
+                            <div class="team-member-workload-fill" style="width: ${utilizationPercent}%; background: ${barColor};"></div>
+                        </div>
+                        <div class="team-member-workload-text">
+                            <span>${allocatedHours}h / ${sprintBandwidth}h</span>
+                            <span>${utilizationPercent}%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-member-stats">
+                    <div class="team-stat" title="Total tasks assigned">
+                        <span class="team-stat-value">${totalTasks}</span>
+                        <span class="team-stat-label">Total</span>
+                    </div>
+                    <div class="team-stat" title="Active / in-progress tasks">
+                        <span class="team-stat-value">${activeTasks}</span>
+                        <span class="team-stat-label">Active</span>
+                    </div>
+                    <div class="team-stat" title="Completed tasks">
+                        <span class="team-stat-value">${completedTasks}</span>
+                        <span class="team-stat-label">Done</span>
+                    </div>
+                </div>
+                ${(() => {
+                    const avail = getNextAvailableDay(member, 2);
+                    if (avail) {
+                        const isToday = avail.date === getTodayLocalDate();
+                        return `<div class="next-available-badge" title="Next day with ${avail.freeHours}h free">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            ${isToday ? 'Today' : formatDate(avail.date)} · ${avail.freeHours}h free
+                        </div>`;
+                    } else {
+                        return `<div class="next-available-badge busy" title="No available slot this sprint">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                            Fully booked
+                        </div>`;
+                    }
+                })()}
+            </div>
+        `;
+    }).join('');
+}
+
+// =============================================
+// BANDWIDTH OVERVIEW
+// =============================================
+
+function renderDesktopBandwidthOverview() {
+    const container = document.getElementById('desktop-bandwidth-overview');
+    if (!container) return;
+    
+    const teamSprintBandwidth = getTeamSprintBandwidth();
+    const teamRemainingBandwidth = getTeamRemainingBandwidth();
+    const totalAllocatedHours = appData.tasks ? appData.tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0) : 0;
+    const availableHours = Math.max(0, teamSprintBandwidth - totalAllocatedHours);
+    const utilizationPercent = teamSprintBandwidth > 0 ? Math.min(Math.round((totalAllocatedHours / teamSprintBandwidth) * 100), 100) : 0;
+    
+    const utilizationClass = totalAllocatedHours > teamSprintBandwidth ? 'danger' : 
+                            totalAllocatedHours > teamSprintBandwidth * 0.8 ? 'warning' : 'success';
+    
+    const barColor = utilizationClass === 'danger' ? 'var(--danger)' : 
+                     utilizationClass === 'warning' ? 'var(--warning)' : 'var(--success)';
+    
+    // Update overall utilization badge in card header
+    const utilizationBadgeEl = document.getElementById('overall-utilization-badge');
+    if (utilizationBadgeEl) {
+        utilizationBadgeEl.textContent = `${utilizationPercent}% used`;
+    }
+    
+    // Calculate some extra stats
+    const totalTasks = appData.tasks ? appData.tasks.length : 0;
+    const avgHoursPerTask = totalTasks > 0 ? (totalAllocatedHours / totalTasks).toFixed(1) : 0;
+    const teamSize = appData.teamMembers ? appData.teamMembers.length : 0;
+    const avgPerMember = teamSize > 0 ? Math.round(totalAllocatedHours / teamSize) : 0;
+    
+    container.innerHTML = `
+        <div class="bandwidth-overview-visual">
+            <div class="bandwidth-overview-visual-label">
+                <span>Team Utilization</span>
+                <span>${utilizationPercent}%</span>
+            </div>
+            <div class="bandwidth-overview-bar">
+                <div class="bandwidth-overview-bar-fill" style="width: ${utilizationPercent}%; background: ${barColor};"></div>
+            </div>
+        </div>
+        <div class="bandwidth-overview-grid">
+            <div class="bandwidth-overview-item" title="Total available hours across all team members for this sprint">
+                <span class="bandwidth-label">Capacity</span>
+                <span class="bandwidth-value">${teamSprintBandwidth}h</span>
+            </div>
+            <div class="bandwidth-overview-item" title="Sum of estimated hours from all tasks">
+                <span class="bandwidth-label">Allocated</span>
+                <span class="bandwidth-value ${utilizationClass}">${totalAllocatedHours}h</span>
+            </div>
+            <div class="bandwidth-overview-item" title="Capacity minus allocated hours = unassigned capacity">
+                <span class="bandwidth-label">Available</span>
+                <span class="bandwidth-value ${availableHours > 0 ? 'success' : 'danger'}">${availableHours}h</span>
+            </div>
+            <div class="bandwidth-overview-item" title="Hours remaining based on time elapsed in the sprint">
+                <span class="bandwidth-label">Remaining</span>
+                <span class="bandwidth-value">${Math.round(teamRemainingBandwidth)}h</span>
+            </div>
+        </div>
+        <div class="bandwidth-overview-summary">
+            <span title="Average estimated hours per task">${avgHoursPerTask}h / task</span>
+            <span>·</span>
+            <span title="Average allocated hours per team member">${avgPerMember}h / member</span>
+            <span>·</span>
+            <span>${teamSize} members · ${totalTasks} tasks</span>
+        </div>
+    `;
+}
+
+// =============================================
+// TASKS - GRID & LIST VIEWS
+// =============================================
+
+function renderDesktopTasksView(tasks = null) {
+    renderDesktopTasksGrid(tasks);
+    renderDesktopTasksList(tasks);
+}
+
+function renderDesktopTasksGrid(tasks = null) {
+    const container = document.getElementById('desktop-tasks-grid');
+    if (!container) return;
+    
+    const tasksToRender = tasks || appData.tasks || [];
+    
+    // Update task count in section header
+    const taskCountEl = document.getElementById('desktop-task-count');
+    if (taskCountEl) {
+        const totalTasks = appData.tasks ? appData.tasks.length : 0;
+        const showing = tasksToRender.length;
+        taskCountEl.textContent = showing === totalTasks ? `${totalTasks} tasks` : `${showing} of ${totalTasks} tasks`;
+    }
+    
+    if (tasksToRender.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text-muted);">
+                <p>No tasks found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = tasksToRender.map(task => {
+        const statusInfo = getStatusInfo(task.status, task.completed);
+        const member = getTeamMember(task.owner);
+        const ownerName = member ? member.name : (task.owner || 'Unassigned');
+        
+        const badgeColors = {
+            'success': 'background: #d1fae5; color: #047857;',
+            'warning': 'background: #fef3c7; color: #b45309;',
+            'danger': 'background: #fee2e2; color: #dc2626;',
+            'info': 'background: #cffafe; color: #0891b2;',
+            'secondary': 'background: #e5e7eb; color: #4b5563;',
+            'muted': 'background: #f3f4f6; color: #6b7280;'
+        };
+        
+        const badgeStyle = badgeColors[statusInfo.color] || badgeColors.secondary;
+        const normalizedStatus = normalizeTaskStatus(task.status, task.completed ? 'completed' : 'todo');
+        const cardClass = task.completed ? 'completed' : 
+                         task.priority === 'urgent' ? 'urgent' : 
+                         statusInfo.class?.includes('blocked') ? 'blocked' : '';
+        const statusCardClass = `card-status-${normalizedStatus}`;
+        
+        return `
+            <div class="desktop-task-card ${cardClass} ${statusCardClass}" onclick="showDesktopTaskDetail('${task.id}')">
+                <div class="desktop-task-header">
+                    <span class="desktop-task-title">${escapeHtml(task.name)}</span>
+                    <span class="desktop-task-badge" style="${badgeStyle}">${statusInfo.label}</span>
+                </div>
+                <div class="desktop-task-meta">
+                    <span class="desktop-task-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        ${escapeHtml(ownerName)}
+                    </span>
+                    ${task.estimatedHours ? `
+                        <span class="desktop-task-meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            ${task.estimatedHours}h
+                        </span>
+                    ` : ''}
+                    ${task.startDate ? `
+                        <span class="desktop-task-meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            ${formatDate(task.startDate)}${task.endDate && task.endDate !== task.startDate ? ' - ' + formatDate(task.endDate) : ''}
+                        </span>
+                    ` : ''}
+                    ${task.jiraId && task.jiraId !== 'Not Provided' ? `
+                        <span class="desktop-task-meta-item" style="color: var(--primary);">
+                            ${escapeHtml(task.jiraId)}
+                        </span>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderDesktopTasksList(tasks = null) {
+    const container = document.getElementById('desktop-tasks-list');
+    if (!container) return;
+    
+    const tasksToRender = tasks || appData.tasks || [];
+    
+    // Sort tasks
+    const sorted = [...tasksToRender].sort((a, b) => {
+        const field = desktopState.taskSort.field;
+        const dir = desktopState.taskSort.direction === 'asc' ? 1 : -1;
+        const aVal = a[field] || '';
+        const bVal = b[field] || '';
+        if (typeof aVal === 'string') return aVal.localeCompare(bVal) * dir;
+        return (aVal - bVal) * dir;
+    });
+    
+    const badgeColors = {
+        'success': 'background: #d1fae5; color: #047857;',
+        'warning': 'background: #fef3c7; color: #b45309;',
+        'danger': 'background: #fee2e2; color: #dc2626;',
+        'info': 'background: #cffafe; color: #0891b2;',
+        'secondary': 'background: #e5e7eb; color: #4b5563;',
+        'muted': 'background: #f3f4f6; color: #6b7280;'
+    };
+    
+    const priorityColors = { 'urgent': '#ef4444', 'normal': '#3b82f6', 'low': '#9ca3af' };
+    
+    const columns = [
+        { field: 'name', label: 'Task' },
+        { field: 'owner', label: 'Owner' },
+        { field: 'status', label: 'Status' },
+        { field: 'priority', label: 'Priority' },
+        { field: 'estimatedHours', label: 'Hours' },
+        { field: 'startDate', label: 'Start' },
+        { field: 'endDate', label: 'Due' },
+        { field: 'jiraId', label: 'Jira' }
+    ];
+    
+    const sortField = desktopState.taskSort.field;
+    const sortDir = desktopState.taskSort.direction;
+    
+    container.innerHTML = `
+        <table class="desktop-tasks-table" style="min-width: 900px;">
+            <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 12%;">
+                <col style="width: 11%;">
+                <col style="width: 10%;">
+                <col style="width: 8%;">
+                <col style="width: 12%;">
+                <col style="width: 12%;">
+                <col style="width: 10%;">
+            </colgroup>
+            <thead>
+                <tr>
+                    ${columns.map(col => `
+                        <th onclick="sortDesktopTasks('${col.field}')" class="${sortField === col.field ? 'sorted' : ''}">
+                            ${col.label}
+                            <span class="sort-icon">${sortField === col.field ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+                        </th>
+                    `).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                ${sorted.map(task => {
+                    const statusInfo = getStatusInfo(task.status, task.completed);
+                    const badgeStyle = badgeColors[statusInfo.color] || badgeColors.secondary;
+                    const member = getTeamMember(task.owner);
+                    const ownerName = member ? member.name : (task.owner || 'Unassigned');
+                    const prioColor = priorityColors[task.priority] || '#9ca3af';
+                    const normalizedStatus = normalizeTaskStatus(task.status, task.completed ? 'completed' : 'todo');
+                    const rowStatusClass = task.completed ? 'row-completed' : `row-${normalizedStatus}`;
+                    
+                    return `
+                        <tr class="${rowStatusClass}" onclick="showDesktopTaskDetail('${task.id}')">
+                            <td><span class="table-task-name">${escapeHtml(task.name)}</span></td>
+                            <td>${escapeHtml(ownerName)}</td>
+                            <td><span class="table-status-badge" style="${badgeStyle}">${statusInfo.label}</span></td>
+                            <td>
+                                <span class="table-priority-badge">
+                                    <span class="table-priority-dot" style="background: ${prioColor};"></span>
+                                    ${escapeHtml(task.priority || 'normal')}
+                                </span>
+                            </td>
+                            <td>${task.estimatedHours || '-'}h</td>
+                            <td>${task.startDate ? formatDate(task.startDate) : '-'}</td>
+                            <td>${task.endDate ? formatDate(task.endDate) : '-'}</td>
+                            <td>
+                                ${task.jiraUrl ? `<a href="${sanitizeUrl(task.jiraUrl)}" target="_blank" rel="noopener noreferrer" class="table-jira-link" onclick="event.stopPropagation();">
+                                    ${escapeHtml(task.jiraId || 'Link')}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                </a>` : (task.jiraId || '-')}
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function sortDesktopTasks(field) {
+    if (desktopState.taskSort.field === field) {
+        desktopState.taskSort.direction = desktopState.taskSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        desktopState.taskSort.field = field;
+        desktopState.taskSort.direction = 'asc';
+    }
+    applyDesktopFilters();
+}
+
+// =============================================
+// BANDWIDTH GRID
+// =============================================
+
+function renderDesktopBandwidthGrid() {
+    const container = document.getElementById('desktop-bandwidth-grid');
+    if (!container || !appData.teamMembers) return;
+    
+    const tasksByOwner = {};
+    if (appData.tasks) {
+        appData.tasks.forEach(task => {
+            const owner = task.owner || 'unassigned';
+            if (!tasksByOwner[owner]) tasksByOwner[owner] = [];
+            tasksByOwner[owner].push(task);
+        });
+    }
+    
+    container.innerHTML = appData.teamMembers.map(member => {
+        const sprintBandwidth = getSprintBandwidth(member);
+        const remainingBandwidth = getRemainingSprintBandwidth(member);
+        const memberTasks = tasksByOwner[member.id] || [];
+        const allocatedHours = memberTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+        const utilizationPercent = sprintBandwidth > 0 ? Math.round((allocatedHours / sprintBandwidth) * 100) : 0;
+        const availableHours = Math.max(0, sprintBandwidth - allocatedHours);
+        
+        const gradient = getGradientForColorClass(member.colorClass);
+        const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        
+        const progressColor = utilizationPercent > 100 ? 'var(--danger)' : 
+                             utilizationPercent > 80 ? 'var(--warning)' : 'var(--success)';
+        
+        return `
+            <div class="desktop-bandwidth-card" title="${escapeHtml(member.name)}: ${memberTasks.length} tasks, ${allocatedHours}h / ${sprintBandwidth}h capacity">
+                <div class="bandwidth-card-header">
+                    <div class="bandwidth-card-avatar" style="background: ${gradient};">
+                        ${initials}
+                    </div>
+                    <div class="bandwidth-card-info">
+                        <h4>${escapeHtml(member.name)}</h4>
+                        <span>${escapeHtml(member.role || 'Team Member')}</span>
+                    </div>
+                    <span class="bandwidth-card-task-count" title="${memberTasks.length} task${memberTasks.length !== 1 ? 's' : ''} assigned">${memberTasks.length} tasks</span>
+                </div>
+                <div class="bandwidth-card-progress">
+                    <div class="bandwidth-progress-bar">
+                        <div class="bandwidth-progress-fill" style="width: ${Math.min(utilizationPercent, 100)}%; background: ${progressColor};"></div>
+                    </div>
+                    <div class="bandwidth-progress-text">
+                        <span>${allocatedHours}h allocated</span>
+                        <span>${utilizationPercent}%</span>
+                    </div>
+                </div>
+                <div class="bandwidth-card-stats">
+                    <div class="bandwidth-stat">
+                        <span class="bandwidth-stat-value">${sprintBandwidth}h</span>
+                        <span class="bandwidth-stat-label">Total</span>
+                    </div>
+                    <div class="bandwidth-stat">
+                        <span class="bandwidth-stat-value">${availableHours}h</span>
+                        <span class="bandwidth-stat-label">Available</span>
+                    </div>
+                    <div class="bandwidth-stat">
+                        <span class="bandwidth-stat-value">${Math.round(remainingBandwidth)}h</span>
+                        <span class="bandwidth-stat-label">Remaining</span>
+                    </div>
+                    <div class="bandwidth-stat">
+                        <span class="bandwidth-stat-value">${memberTasks.filter(t => t.completed).length}/${memberTasks.length}</span>
+                        <span class="bandwidth-stat-label">Done</span>
+                    </div>
+                </div>
+                ${(() => {
+                    const avail = getNextAvailableDay(member, 2);
+                    if (avail) {
+                        const isToday = avail.date === getTodayLocalDate();
+                        return `<div class="next-available-badge" title="Next day with ${avail.freeHours}h free">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            ${isToday ? 'Today' : formatDate(avail.date)} · ${avail.freeHours}h free
+                        </div>`;
+                    } else {
+                        return `<div class="next-available-badge busy" title="No available slot this sprint">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                            Fully booked
+                        </div>`;
+                    }
+                })()}
+                <div class="bandwidth-view-details-btn" title="View full profile for ${escapeHtml(member.name)}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    View Details
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// =============================================
+// MILESTONES
+// =============================================
+
+function renderDesktopMilestones() {
+    const container = document.getElementById('desktop-milestones-timeline');
+    const summaryGrid = document.getElementById('milestone-summary-grid');
+    
+    if (!appData.milestones || appData.milestones.length === 0) {
+        if (container) {
+            container.innerHTML = `<div style="text-align: center; padding: 48px; color: var(--text-muted);"><p>No milestones found</p></div>`;
+        }
+        if (summaryGrid) summaryGrid.innerHTML = '';
+        return;
+    }
+    
+    const today = getTodayLocalDate();
+    const todayDate = new Date(today);
+    const sortedMilestones = [...appData.milestones].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Compute stats
+    const total = sortedMilestones.length;
+    let completedCount = 0, upcomingCount = 0, overdueCount = 0, inProgressCount = 0;
+    
+    sortedMilestones.forEach(m => {
+        const mDate = new Date(m.date);
+        const isOverdue = mDate < todayDate && m.status !== 'completed';
+        if (m.status === 'completed') completedCount++;
+        else if (isOverdue) overdueCount++;
+        else if (m.status === 'in-progress') inProgressCount++;
+        else upcomingCount++;
+    });
+    
+    // Render summary stats
+    if (summaryGrid) {
+        summaryGrid.innerHTML = `
+            <div class="milestone-stat-card">
+                <div class="milestone-stat-icon total">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                </div>
+                <div class="milestone-stat-info">
+                    <span class="milestone-stat-value">${total}</span>
+                    <span class="milestone-stat-label">Total Milestones</span>
+                </div>
+            </div>
+            <div class="milestone-stat-card">
+                <div class="milestone-stat-icon completed">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div class="milestone-stat-info">
+                    <span class="milestone-stat-value">${completedCount}</span>
+                    <span class="milestone-stat-label">Completed</span>
+                </div>
+            </div>
+            <div class="milestone-stat-card">
+                <div class="milestone-stat-icon upcoming">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div class="milestone-stat-info">
+                    <span class="milestone-stat-value">${upcomingCount + inProgressCount}</span>
+                    <span class="milestone-stat-label">In Progress / Upcoming</span>
+                </div>
+            </div>
+            <div class="milestone-stat-card">
+                <div class="milestone-stat-icon overdue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div class="milestone-stat-info">
+                    <span class="milestone-stat-value">${overdueCount}</span>
+                    <span class="milestone-stat-label">Overdue</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Render timeline nodes
+    if (container) {
+        const completionRate = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+        const timelineHint = overdueCount > 0 
+            ? `<p class="section-hint-text" style="margin: 0 0 16px; padding-left: 32px;">${completionRate}% of milestones completed. <strong style="color: var(--danger);">${overdueCount} overdue</strong> — review deadlines.</p>`
+            : `<p class="section-hint-text" style="margin: 0 0 16px; padding-left: 32px;">${completionRate}% of milestones completed. All timelines on track.</p>`;
+        
+        container.innerHTML = timelineHint + sortedMilestones.map(milestone => {
+            const milestoneDate = new Date(milestone.date);
+            const isOverdue = milestoneDate < todayDate && milestone.status !== 'completed';
+            const daysLeft = Math.ceil((milestoneDate - todayDate) / (1000 * 60 * 60 * 24));
+            const daysOverdue = Math.abs(daysLeft);
+            
+            let statusKey = 'pending';
+            if (milestone.status === 'completed') statusKey = 'completed';
+            else if (milestone.status === 'in-progress') statusKey = 'in-progress';
+            else if (isOverdue) statusKey = 'overdue';
+            else if (daysLeft <= 7 && daysLeft > 0) statusKey = 'upcoming';
+            
+            const badgeIcons = {
+                'completed': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+                'in-progress': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+                'overdue': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                'upcoming': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+                'pending': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+            };
+            const badgeLabels = {
+                'completed': 'Completed',
+                'in-progress': 'In Progress',
+                'overdue': 'Overdue',
+                'upcoming': 'Upcoming',
+                'pending': 'Pending'
+            };
+            
+            const progress = milestone.progress !== undefined ? milestone.progress : 0;
+            
+            const overdueWarning = isOverdue ? `
+                <div class="milestone-overdue-warning">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue
+                </div>
+            ` : '';
+            
+            const dueDateLabel = milestone.status === 'completed' ? 'Completed' :
+                                daysLeft === 0 ? 'Due today' :
+                                daysLeft === 1 ? 'Due tomorrow' :
+                                daysLeft > 1 ? `${daysLeft} days left` :
+                                `${daysOverdue} days overdue`;
+            
+            return `
+                <div class="milestone-node">
+                    <div class="milestone-node-dot dot-${statusKey}"></div>
+                    <div class="milestone-node-card card-${statusKey}">
+                        <div class="milestone-card-top">
+                            <span class="milestone-card-title">${escapeHtml(milestone.title)}</span>
+                            <span class="milestone-card-badge badge-${statusKey}">${badgeIcons[statusKey] || ''} ${badgeLabels[statusKey]}</span>
+                        </div>
+                        <div class="milestone-card-meta">
+                            <span class="milestone-meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                ${formatDate(milestone.date)}
+                            </span>
+                            <span class="milestone-meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                ${escapeHtml(milestone.assignee || 'Unassigned')}
+                            </span>
+                            <span class="milestone-meta-item" style="color: ${statusKey === 'overdue' ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: ${statusKey === 'overdue' ? '600' : '400'};">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                ${dueDateLabel}
+                            </span>
+                        </div>
+                        <div class="milestone-card-progress">
+                            <div class="milestone-progress-track">
+                                <div class="milestone-progress-fill fill-${statusKey}" style="width: ${progress}%;"></div>
+                            </div>
+                            <div class="milestone-progress-info">
+                                <span>${milestone.description || ''}</span>
+                                <span class="milestone-progress-percent">${progress}%</span>
+                            </div>
+                        </div>
+                        ${overdueWarning}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+// =============================================
+// SPRINT CALENDAR (Ported from Mobile)
+// =============================================
+
+function renderDesktopSprintCalendar() {
+    const container = document.getElementById('desktop-sprint-calendar');
+    if (!container || !appData.project || !appData.tasks) return;
+    
+    const todayStr = getTodayLocalDate();
+    
+    // Build task count by date with status breakdown
+    const loadByDate = {};
+    const statusByDate = {};
+    appData.tasks.forEach(task => {
+        if (!task.startDate || !task.endDate) return;
+        const dates = generateDateRange(task.startDate, task.endDate);
+        const status = normalizeTaskStatus(task);
+        dates.forEach(d => {
+            if (!isWeekend(d)) {
+                loadByDate[d] = (loadByDate[d] || 0) + 1;
+                if (!statusByDate[d]) statusByDate[d] = { completed: 0, blocked: 0, inProgress: 0, review: 0, todo: 0 };
+                if (task.completed || status === 'completed') statusByDate[d].completed++;
+                else if (status === 'blocked') statusByDate[d].blocked++;
+                else if (status === 'in-progress') statusByDate[d].inProgress++;
+                else if (status === 'review') statusByDate[d].review++;
+                else statusByDate[d].todo++;
+            }
+        });
+    });
+    
+    const sprintDates = generateDateRange(appData.project.startDate, appData.project.endDate);
+    
+    // Group into weeks
+    const weekGroups = [];
+    let currentWeek = { dates: [], weekNumber: 1 };
+    
+    sprintDates.forEach(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = date.getDay();
+        
+        if (dayOfWeek === 0 && currentWeek.dates.length > 0) {
+            weekGroups.push(currentWeek);
+            currentWeek = { dates: [], weekNumber: weekGroups.length + 1 };
+        }
+        
+        currentWeek.dates.push({
+            dateStr,
+            date,
+            dayOfWeek,
+            dayNum: date.getDate(),
+            isToday: dateStr === todayStr,
+            isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+            taskCount: loadByDate[dateStr] || 0
+        });
+    });
+    
+    if (currentWeek.dates.length > 0) weekGroups.push(currentWeek);
+    
+    const maxTasks = Math.max(3, ...Object.values(loadByDate));
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Calculate sprint summary stats
+    const totalSprintTasks = appData.tasks ? appData.tasks.length : 0;
+    const totalCompleted = appData.tasks ? appData.tasks.filter(t => t.completed).length : 0;
+    const totalBlocked = appData.tasks ? appData.tasks.filter(t => normalizeTaskStatus(t.status) === 'blocked').length : 0;
+    const totalInProgress = appData.tasks ? appData.tasks.filter(t => normalizeTaskStatus(t.status) === 'in-progress').length : 0;
+    const workingDatesCount = sprintDates.filter(d => !isWeekend(d)).length;
+    const avgTasksPerDay = workingDatesCount > 0 ? (Object.values(loadByDate).reduce((a, b) => a + b, 0) / workingDatesCount).toFixed(1) : 0;
+    const peakDay = Object.entries(loadByDate).sort((a, b) => b[1] - a[1])[0];
+    const peakDayLabel = peakDay ? `${new Date(peakDay[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${peakDay[1]} tasks)` : 'N/A';
+    
+    container.innerHTML = `
+        <div class="cal-summary-strip">
+            <div class="cal-summary-item"><span class="cal-summary-val">${workingDatesCount}</span><span class="cal-summary-lbl">Work Days</span></div>
+            <div class="cal-summary-item"><span class="cal-summary-val">${avgTasksPerDay}</span><span class="cal-summary-lbl">Avg Tasks/Day</span></div>
+            <div class="cal-summary-item"><span class="cal-summary-val">${peakDayLabel}</span><span class="cal-summary-lbl">Peak Day</span></div>
+            <div class="cal-summary-item"><span class="cal-summary-val">${totalCompleted}/${totalSprintTasks}</span><span class="cal-summary-lbl">Completed</span></div>
+            ${totalBlocked > 0 ? `<div class="cal-summary-item cal-summary-danger"><span class="cal-summary-val">${totalBlocked}</span><span class="cal-summary-lbl">Blocked</span></div>` : ''}
+        </div>
+        <div class="desktop-calendar-grid desktop-calendar-compact">
+            <div class="desktop-calendar-header-row">
+                <div class="desktop-calendar-weekday"></div>
+                ${weekdays.map((d, i) => `<div class="desktop-calendar-weekday ${i === 0 || i === 6 ? 'weekend' : ''}">${d}</div>`).join('')}
+            </div>
+            ${weekGroups.map(week => {
+                const isCurrentWeek = week.dates.some(d => d.isToday);
+                const weekTasks = week.dates.reduce((sum, d) => sum + d.taskCount, 0);
+                return `
+                    <div class="desktop-calendar-week-row ${isCurrentWeek ? 'current-week' : ''}">
+                        <div class="desktop-calendar-week-label" title="Week ${week.weekNumber}: ${weekTasks} tasks">W${week.weekNumber}</div>
+                        ${week.dates.map(day => {
+                            const intensity = maxTasks > 0 ? Math.min(day.taskCount / maxTasks, 1) : 0;
+                            const monthShort = day.date.toLocaleDateString('en-US', { month: 'short' });
+                            const ds = statusByDate[day.dateStr] || { completed: 0, blocked: 0, inProgress: 0, review: 0, todo: 0 };
+                            // Determine dominant status for the day
+                            let dayStatusClass = '';
+                            if (!day.isWeekend && day.taskCount > 0) {
+                                if (ds.blocked > 0) dayStatusClass = 'cal-has-blocked';
+                                else if (ds.inProgress > 0) dayStatusClass = 'cal-has-progress';
+                                else if (ds.review > 0) dayStatusClass = 'cal-has-review';
+                                else if (ds.completed === day.taskCount) dayStatusClass = 'cal-all-done';
+                                else dayStatusClass = 'cal-has-todo';
+                            }
+                            return `
+                                <div class="desktop-calendar-day 
+                                    ${day.isToday ? 'today' : ''} 
+                                    ${day.isWeekend ? 'weekend' : ''} 
+                                    ${day.taskCount > 0 && !day.isWeekend ? 'has-tasks' : ''} 
+                                    ${day.taskCount >= 3 ? 'high-load' : ''}
+                                    ${dayStatusClass}"
+                                    style="--intensity: ${intensity.toFixed(2)}; grid-column: ${day.dayOfWeek + 2};"
+                                    title="${monthShort} ${day.dayNum}: ${day.isWeekend ? 'Weekend (No Work)' : `${day.taskCount} task${day.taskCount !== 1 ? 's' : ''} — ✅${ds.completed} 🔵${ds.inProgress} 🔴${ds.blocked} 🔍${ds.review} ⬜${ds.todo}`}">
+                                    <span class="day-num">${day.dayNum}</span>
+                                    ${!day.isWeekend && day.taskCount > 0 ? `<span class="day-tasks">${day.taskCount}</span>` : ''}
+                                    ${day.isWeekend ? '<span class="day-off-mark">✕</span>' : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        <div class="desktop-calendar-legend">
+            <div class="legend-item">
+                <div class="legend-swatch" style="background: rgba(239, 68, 68, 0.12); border: 1px dashed rgba(239,68,68,0.4);"></div>
+                <span class="legend-label">Weekend</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-swatch" style="background: rgba(16, 185, 129, 0.35);"></div>
+                <span class="legend-label">All Done</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-swatch" style="background: rgba(59, 130, 246, 0.3);"></div>
+                <span class="legend-label">In Progress</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-swatch" style="background: rgba(239, 68, 68, 0.3);"></div>
+                <span class="legend-label">Has Blocked</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-swatch" style="background: rgba(6, 182, 212, 0.3);"></div>
+                <span class="legend-label">In Review</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-swatch" style="border: 2px solid var(--primary); background: rgba(59, 130, 246, 0.1);"></div>
+                <span class="legend-label">Today</span>
+            </div>
+        </div>
+    `;
+}
+
+// =============================================
+// TEAM AVAILABILITY CALENDAR
+// =============================================
+
+function renderTeamAvailability() {
+    const container = document.getElementById('desktop-team-availability');
+    if (!container || !appData.project || !appData.teamMembers || !appData.tasks) return;
+    
+    const sprintDates = generateDateRange(appData.project.startDate, appData.project.endDate);
+    const todayStr = getTodayLocalDate();
+    
+    // Only show working days (filter out weekends) + limit to ~14 days for readability
+    const workingDates = sprintDates.filter(d => !isWeekend(d));
+    
+    // Find the current/upcoming 2-week window
+    const todayIndex = workingDates.findIndex(d => d >= todayStr);
+    const startIdx = Math.max(0, todayIndex > 0 ? todayIndex - 2 : 0);
+    const displayDates = workingDates.slice(startIdx, startIdx + 12);
+    
+    if (displayDates.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--text-muted);">No working days to display</div>';
+        return;
+    }
+    
+    // Build leave lookup per member: { memberId: Set(['2026-02-16', ...]) }
+    const memberLeaves = {};
+    appData.teamMembers.forEach(m => {
+        memberLeaves[m.id] = new Set(m.leaves || []);
+    });
+    
+    // Build task count per member per day
+    const memberLoad = {};
+    appData.teamMembers.forEach(m => { memberLoad[m.id] = {}; });
+    
+    appData.tasks.forEach(task => {
+        if (!task.startDate || !task.endDate) return;
+        const dates = generateDateRange(task.startDate, task.endDate);
+        const ownerId = task.owner;
+        dates.forEach(d => {
+            if (isWeekend(d)) return;
+            if (ownerId === 'both') {
+                appData.teamMembers.forEach(m => {
+                    if (!memberLoad[m.id]) memberLoad[m.id] = {};
+                    memberLoad[m.id][d] = (memberLoad[m.id][d] || 0) + 1;
+                });
+            } else if (memberLoad[ownerId]) {
+                memberLoad[ownerId][d] = (memberLoad[ownerId][d] || 0) + 1;
+            }
+        });
+    });
+    
+    const colCount = displayDates.length;
+    const gridCols = `120px repeat(${colCount}, 1fr)`;
+    
+    container.innerHTML = `
+        <p class="team-avail-hint">Showing ${displayDates.length} working days around today. Numbers indicate active tasks assigned.</p>
+        <div class="team-avail-grid">
+            <div class="team-avail-header-row" style="grid-template-columns: ${gridCols};">
+                <div class="team-avail-day-header">Member</div>
+                ${displayDates.map(d => {
+                    const dt = new Date(d + 'T00:00:00');
+                    const dayNum = dt.getDate();
+                    const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 2);
+                    const isToday = d === todayStr;
+                    const isPast = d < todayStr;
+                    return `<div class="team-avail-day-header ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}" title="${formatDate(d)}" style="${isToday ? 'color: var(--primary); font-weight: 700;' : ''}">${dayName}<br>${dayNum}</div>`;
+                }).join('')}
+            </div>
+            ${appData.teamMembers.map(member => {
+                const leaveSet = memberLeaves[member.id];
+                return `<div class="team-avail-row" style="grid-template-columns: ${gridCols};">
+                    <div class="team-avail-name" title="${member.name}">${escapeHtml(member.name.split(' ')[0])}</div>
+                    ${displayDates.map(d => {
+                        const isPast = d < todayStr;
+                        const isOnLeave = leaveSet.has(d);
+                        const taskCount = (memberLoad[member.id] && memberLoad[member.id][d]) || 0;
+                        
+                        let cellClass = '';
+                        let label = '';
+                        let title = '';
+                        
+                        if (isOnLeave) {
+                            cellClass = 'avail-leave';
+                            label = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
+                            title = `${member.name}: On leave`;
+                        } else if (isPast) {
+                            cellClass = taskCount > 0 ? 'avail-past-busy' : 'avail-past';
+                            label = taskCount > 0 ? String(taskCount) : '-';
+                            title = `${member.name}: ${taskCount} task${taskCount !== 1 ? 's' : ''} on ${formatDate(d)} (past)`;
+                        } else if (taskCount >= 3) {
+                            cellClass = 'avail-overloaded';
+                            label = String(taskCount);
+                            title = `${member.name}: ${taskCount} tasks — overloaded`;
+                        } else if (taskCount > 0) {
+                            cellClass = 'avail-busy';
+                            label = String(taskCount);
+                            title = `${member.name}: ${taskCount} task${taskCount !== 1 ? 's' : ''}`;
+                        } else {
+                            cellClass = 'avail-free';
+                            label = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                            title = `${member.name}: Free on ${formatDate(d)}`;
+                        }
+                        
+                        return `<div class="team-avail-cell ${cellClass}" title="${title}">${label}</div>`;
+                    }).join('')}
+                </div>`;
+            }).join('')}
+        </div>
+        <div class="team-avail-legend">
+            <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(16, 185, 129, 0.3);"></div> Free</div>
+            <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(59, 130, 246, 0.3);"></div> Busy (1-2)</div>
+            <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(239, 68, 68, 0.3);"></div> Overloaded (3+)</div>
+            <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(245, 158, 11, 0.35);"></div> On Leave</div>
+            <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: var(--gray-200);"></div> Past Day</div>
+        </div>
+        <p class="team-avail-data-hint">To mark leaves, add a <strong>leaves</strong> column to your MEMBERS sheet with comma-separated dates (e.g. <code>2026-02-16,2026-02-17</code>).</p>
+    `;
+}
+
+// =============================================
+// WEEKLY BREAKDOWN
+// =============================================
+
+function renderDesktopWeeklyBreakdown() {
+    const container = document.getElementById('desktop-weekly-breakdown');
+    if (!container || !appData.project || !appData.tasks) return;
+    
+    const sprintDates = generateDateRange(appData.project.startDate, appData.project.endDate);
+    const todayStr = getTodayLocalDate();
+    
+    // Group into weeks
+    const weeks = [];
+    let weekStart = null;
+    let weekDates = [];
+    
+    sprintDates.forEach(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = date.getDay();
+        
+        if (dayOfWeek === 1 || weekStart === null) { // Monday or first day
+            if (weekDates.length > 0) {
+                weeks.push({ start: weekDates[0], end: weekDates[weekDates.length - 1], dates: [...weekDates] });
+            }
+            weekDates = [];
+            weekStart = dateStr;
+        }
+        weekDates.push(dateStr);
+    });
+    if (weekDates.length > 0) {
+        weeks.push({ start: weekDates[0], end: weekDates[weekDates.length - 1], dates: [...weekDates] });
+    }
+    
+    container.innerHTML = weeks.map((week, idx) => {
+        const isCurrentWeek = week.dates.includes(todayStr);
+        
+        // Find tasks that overlap this week
+        const weekTasks = appData.tasks.filter(task => {
+            if (!task.startDate || !task.endDate) return false;
+            return task.startDate <= week.end && task.endDate >= week.start;
+        });
+        
+        const inProgress = weekTasks.filter(t => normalizeTaskStatus(t.status) === 'in-progress').length;
+        const completed = weekTasks.filter(t => normalizeTaskStatus(t.status) === 'completed').length;
+        const blocked = weekTasks.filter(t => normalizeTaskStatus(t.status) === 'blocked').length;
+        
+        return `
+            <div style="padding: 16px; background: ${isCurrentWeek ? 'rgba(59, 130, 246, 0.05)' : 'var(--surface-secondary)'}; border-radius: 10px; border: 1px solid ${isCurrentWeek ? 'var(--primary)' : 'var(--card-border)'}; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: var(--text-primary);">Week ${idx + 1} ${isCurrentWeek ? '(Current)' : ''}</span>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">${formatDate(week.start)} - ${formatDate(week.end)}</span>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span style="padding: 4px 10px; background: var(--badge-bg); border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: var(--badge-text);">${weekTasks.length} tasks</span>
+                    ${inProgress > 0 ? `<span style="padding: 4px 10px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: #3b82f6;">${inProgress} active</span>` : ''}
+                    ${completed > 0 ? `<span style="padding: 4px 10px; background: rgba(16, 185, 129, 0.1); border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: #10b981;">${completed} done</span>` : ''}
+                    ${blocked > 0 ? `<span style="padding: 4px 10px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: #ef4444;">${blocked} blocked</span>` : ''}
+                </div>
+                ${weekTasks.length > 0 ? `
+                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">
+                    ${weekTasks.slice(0, 5).map(task => {
+                        const ns = normalizeTaskStatus(task.status, task.completed ? 'completed' : 'todo');
+                        const dotColor = ns === 'completed' ? '#10b981' : ns === 'in-progress' ? '#3b82f6' : ns === 'blocked' ? '#ef4444' : ns === 'review' ? '#06b6d4' : '#9ca3af';
+                        const bgTint = ns === 'completed' ? 'rgba(16,185,129,0.06)' : ns === 'in-progress' ? 'rgba(59,130,246,0.05)' : ns === 'blocked' ? 'rgba(239,68,68,0.05)' : ns === 'review' ? 'rgba(6,182,212,0.05)' : 'var(--card-bg)';
+                        const member = getTeamMember(task.owner);
+                        const ownerLabel = member ? member.name : (task.owner || '');
+                        const statusInfo = getStatusInfo(task.status, task.completed);
+                        return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: ${bgTint}; border-left: 3px solid ${dotColor}; border-radius: 6px; cursor: pointer; font-size: 0.82rem;" onclick="showDesktopTaskDetail('${task.id}')">
+                            <div style="display:flex;align-items:center;gap:8px;overflow:hidden;flex:1;">
+                                <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
+                                <span style="color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;${task.completed ? 'text-decoration:line-through;opacity:0.65;' : ''}">${escapeHtml(task.name)}</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;">
+                                <span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:${dotColor}15;color:${dotColor};font-weight:500;">${statusInfo.label}</span>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">${escapeHtml(ownerLabel)}</span>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    ${weekTasks.length > 5 ? `<div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); padding: 4px;">+${weekTasks.length - 5} more tasks</div>` : ''}
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
 }
 
 function updateLegend() {
-    if (!appData.teamMembers || appData.teamMembers.length === 0) return;
-    
     const legend = document.querySelector('.legend');
     if (!legend) return;
     
     let legendHTML = '';
     
-    // Add team member colors
-    appData.teamMembers.forEach(member => {
-        const colorClass = member.colorClass;
-        const gradient = getGradientForColorClass(colorClass);
-        legendHTML += `
-            <div class="legend-item">
-                <div class="legend-color" style="background:${gradient};"></div>${member.name}
-            </div>
-        `;
-    });
-    
-    // Add priority colors
+    // Status-based Gantt bar colors
     legendHTML += `
         <div class="legend-item">
-            <div class="legend-color" style="background:linear-gradient(135deg,#ef4444,#dc2626);"></div>Urgent
+            <div class="legend-color" style="background:#10b981;"></div>Completed
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background:linear-gradient(135deg,#94a3b8,#64748b);"></div>Low Priority
+            <div class="legend-color" style="background:#3b82f6;"></div>In Progress
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background:#fecaca;"></div>Weekend/Holiday
+            <div class="legend-color" style="background:#ef4444;"></div>Blocked
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:#06b6d4;"></div>In Review
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:#9ca3af;"></div>To Do / Pending
+        </div>
+    `;
+    
+    // Priority overrides
+    legendHTML += `
+        <div class="legend-item">
+            <div class="legend-color" style="background:linear-gradient(135deg,#ef4444,#dc2626);border:2px solid #fff;"></div>Urgent Priority
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:rgba(108,117,125,0.8);opacity:0.9;"></div>Low Priority
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:rgba(239,68,68,0.12);border:1px dashed #ef4444;"></div>Weekend / Holiday
         </div>
     `;
     
@@ -3192,4 +5320,940 @@ if (typeof mobileMediaQuery.addEventListener === 'function') {
         }
     });
 }
+
+
+// =============================================
+// V3 FEATURES: AUTO-REFRESH, NOTIFICATIONS,
+// MEMBER PROFILES, ACTIVITY LOG, FAB,
+// BREADCRUMB, MICRO-INTERACTIONS
+// =============================================
+
+// --- DATA SNAPSHOT FOR ACTIVITY LOG ---
+let _previousSnapshot = null;
+let _activityLog = [];
+
+function takeDataSnapshot() {
+    if (!appData.tasks) return null;
+    return {
+        timestamp: Date.now(),
+        taskCount: appData.tasks.length,
+        tasks: appData.tasks.map(t => ({
+            id: t.id,
+            name: t.name,
+            status: t.status,
+            completed: t.completed,
+            owner: t.owner,
+            estimatedHours: t.estimatedHours
+        })),
+        completedCount: appData.tasks.filter(t => t.completed).length,
+        blockedCount: appData.tasks.filter(t => 
+            (t.status && t.status.toLowerCase().includes('blocked')) || (t.blockers && t.blockers.trim() !== '')
+        ).length
+    };
+}
+
+// --- AUTO-REFRESH (5-minute polling) ---
+let _autoRefreshInterval = null;
+const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+
+function initAutoRefresh() {
+    if (_autoRefreshInterval) clearInterval(_autoRefreshInterval);
+    
+    _autoRefreshInterval = setInterval(async () => {
+        try {
+            // Take snapshot before silent reload
+            _previousSnapshot = takeDataSnapshot();
+            
+            // Silently re-fetch data without skeleton
+            const success = await loadAllData();
+            if (!success) return;
+            
+            const newSnapshot = takeDataSnapshot();
+            const hasChanges = detectChanges(_previousSnapshot, newSnapshot);
+            
+            if (hasChanges) {
+                showAutoRefreshBar();
+                computeActivityDiff(_previousSnapshot, newSnapshot);
+            }
+        } catch (e) {
+            console.warn('[Auto-Refresh] Silent poll failed:', e);
+        }
+    }, AUTO_REFRESH_MS);
+}
+
+function detectChanges(oldSnap, newSnap) {
+    if (!oldSnap || !newSnap) return false;
+    if (oldSnap.taskCount !== newSnap.taskCount) return true;
+    if (oldSnap.completedCount !== newSnap.completedCount) return true;
+    if (oldSnap.blockedCount !== newSnap.blockedCount) return true;
+    // Check individual task status changes
+    for (let i = 0; i < newSnap.tasks.length; i++) {
+        const nt = newSnap.tasks[i];
+        const ot = oldSnap.tasks.find(t => t.id === nt.id);
+        if (!ot) return true; // new task
+        if (ot.status !== nt.status || ot.completed !== nt.completed) return true;
+    }
+    return false;
+}
+
+function showAutoRefreshBar() {
+    const bar = document.getElementById('auto-refresh-bar');
+    if (bar) bar.style.display = 'flex';
+}
+
+function hideAutoRefreshBar() {
+    const bar = document.getElementById('auto-refresh-bar');
+    if (bar) bar.style.display = 'none';
+}
+
+function applyAutoRefresh() {
+    hideAutoRefreshBar();
+    renderAll();
+    showToast('Dashboard updated with latest data', 'success', 2500);
+}
+
+function dismissAutoRefresh() {
+    hideAutoRefreshBar();
+}
+
+// --- ACTIVITY LOG ---
+function computeActivityDiff(oldSnap, newSnap) {
+    if (!oldSnap || !newSnap) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
+    // New tasks
+    newSnap.tasks.forEach(nt => {
+        const ot = oldSnap.tasks.find(t => t.id === nt.id);
+        if (!ot) {
+            _activityLog.unshift({ type: 'added', text: `"${nt.name}" was added`, time: timeStr });
+        }
+    });
+    
+    // Removed tasks
+    oldSnap.tasks.forEach(ot => {
+        const nt = newSnap.tasks.find(t => t.id === ot.id);
+        if (!nt) {
+            _activityLog.unshift({ type: 'removed', text: `"${ot.name}" was removed`, time: timeStr });
+        }
+    });
+    
+    // Changed tasks
+    newSnap.tasks.forEach(nt => {
+        const ot = oldSnap.tasks.find(t => t.id === nt.id);
+        if (!ot) return;
+        if (ot.status !== nt.status) {
+            _activityLog.unshift({ type: 'changed', text: `"${nt.name}" status → ${nt.status}`, time: timeStr });
+        }
+        if (!ot.completed && nt.completed) {
+            _activityLog.unshift({ type: 'added', text: `"${nt.name}" was completed ✓`, time: timeStr });
+        }
+        if (ot.owner !== nt.owner) {
+            _activityLog.unshift({ type: 'changed', text: `"${nt.name}" reassigned to ${nt.owner}`, time: timeStr });
+        }
+    });
+    
+    // Cap at 50 entries
+    if (_activityLog.length > 50) _activityLog.length = 50;
+    
+    // Save to session
+    try { sessionStorage.setItem('fmb-activity-log', JSON.stringify(_activityLog)); } catch(e) {}
+    
+    renderActivityLog();
+}
+
+function renderActivityLog() {
+    const body = document.getElementById('activity-log-body');
+    if (!body) return;
+    
+    if (_activityLog.length === 0) {
+        body.innerHTML = `
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p>No activity yet</p>
+                <span>Changes will appear here after a refresh</span>
+            </div>
+        `;
+        return;
+    }
+    
+    body.innerHTML = _activityLog.map(item => `
+        <div class="activity-item">
+            <div class="activity-dot ${item.type}"></div>
+            <div>
+                <div>${escapeHtml(item.text)}</div>
+                <div class="activity-time">${escapeHtml(item.time)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleActivityLog() {
+    const panel = document.getElementById('activity-log-panel');
+    if (!panel) return;
+    const isActive = panel.classList.contains('active');
+    if (isActive) {
+        panel.classList.remove('active');
+    } else {
+        panel.classList.add('active');
+        renderActivityLog();
+    }
+}
+
+function closeActivityLog() {
+    const panel = document.getElementById('activity-log-panel');
+    if (panel) panel.classList.remove('active');
+}
+
+// --- NOTIFICATION SYSTEM ---
+let _notifications = [];
+
+function generateNotifications() {
+    _notifications = [];
+    const today = getTodayLocalDate();
+    const todayDate = new Date(today + 'T00:00:00');
+    
+    if (!appData.tasks) return;
+    
+    // Overdue tasks (end date past, not completed)
+    appData.tasks.forEach(task => {
+        if (task.endDate && !task.completed) {
+            const endDate = new Date(task.endDate + 'T00:00:00');
+            if (endDate < todayDate) {
+                _notifications.push({
+                    type: 'danger',
+                    icon: '⚠️',
+                    text: `"${task.name}" is overdue (due ${formatDate(task.endDate)})`,
+                    time: 'Now'
+                });
+            }
+        }
+    });
+    
+    // Blocked tasks
+    appData.tasks.forEach(task => {
+        if ((task.status && task.status.toLowerCase().includes('blocked')) || 
+            (task.blockers && task.blockers.trim() !== '')) {
+            _notifications.push({
+                type: 'warning',
+                icon: '🚫',
+                text: `"${task.name}" is blocked`,
+                time: 'Active'
+            });
+        }
+    });
+    
+    // Approaching milestones (within 3 days)
+    if (appData.milestones) {
+        appData.milestones.forEach(milestone => {
+            if (milestone.status === 'completed') return;
+            const mDate = new Date(milestone.date + 'T00:00:00');
+            const diffDays = Math.ceil((mDate - todayDate) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays <= 3) {
+                _notifications.push({
+                    type: 'info',
+                    icon: '🏁',
+                    text: `Milestone "${milestone.title}" ${diffDays === 0 ? 'is today' : `in ${diffDays} day${diffDays !== 1 ? 's' : ''}`}`,
+                    time: formatDate(milestone.date)
+                });
+            }
+            // Overdue milestones
+            if (diffDays < 0 && milestone.status !== 'completed') {
+                _notifications.push({
+                    type: 'danger',
+                    icon: '🚩',
+                    text: `Milestone "${milestone.title}" is overdue`,
+                    time: formatDate(milestone.date)
+                });
+            }
+        });
+    }
+    
+    // Over-capacity members
+    if (appData.teamMembers) {
+        appData.teamMembers.forEach(member => {
+            const sprintBandwidth = getSprintBandwidth(member);
+            const memberTasks = (appData.tasks || []).filter(t => t.owner === member.id);
+            const allocated = memberTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+            if (allocated > sprintBandwidth && sprintBandwidth > 0) {
+                _notifications.push({
+                    type: 'warning',
+                    icon: '📊',
+                    text: `${member.name} is over capacity (${allocated}h / ${sprintBandwidth}h)`,
+                    time: 'Now'
+                });
+            }
+        });
+    }
+}
+
+function renderNotificationDropdown() {
+    const list = document.getElementById('notification-list');
+    const badge = document.getElementById('notification-badge');
+    if (!list) return;
+    
+    if (_notifications.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p>All clear!</p>
+                <span>No alerts at the moment</span>
+            </div>
+        `;
+    } else {
+        list.innerHTML = _notifications.map(n => {
+            const iconClass = n.type === 'danger' ? 'noti-danger' : 
+                             n.type === 'warning' ? 'noti-warning' : 
+                             n.type === 'success' ? 'noti-success' : 'noti-info';
+            return `
+                <div class="notification-item">
+                    <div class="notification-item-icon ${iconClass}">
+                        <span style="font-size: 14px;">${n.icon}</span>
+                    </div>
+                    <div class="notification-item-content">
+                        <div class="notification-item-text">${escapeHtml(n.text)}</div>
+                        <div class="notification-item-time">${escapeHtml(n.time)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    // Update badge
+    if (badge) {
+        if (_notifications.length > 0) {
+            badge.textContent = _notifications.length > 9 ? '9+' : _notifications.length;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notification-dropdown');
+    if (!dropdown) return;
+    
+    const isActive = dropdown.classList.contains('active');
+    // Close other panels
+    closeAllOverlays();
+    
+    if (!isActive) {
+        dropdown.classList.add('active');
+    }
+}
+
+function clearNotifications() {
+    _notifications = [];
+    renderNotificationDropdown();
+}
+
+// --- MEMBER PROFILE DRILL-DOWN ---
+function showMemberProfile(memberId) {
+    const member = getTeamMember(memberId);
+    if (!member) return;
+    
+    const overlay = document.getElementById('member-profile-overlay');
+    const header = document.getElementById('member-profile-header');
+    const body = document.getElementById('member-profile-body');
+    if (!overlay || !header || !body) return;
+    
+    const memberTasks = (appData.tasks || []).filter(t => t.owner === memberId);
+    const sprintBandwidth = getSprintBandwidth(member);
+    const allocatedHours = memberTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+    const completedTasks = memberTasks.filter(t => t.completed).length;
+    const activeTasks = memberTasks.filter(t => !t.completed).length;
+    const gradient = getGradientForColorClass(member.colorClass);
+    const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase();
+    const utilizationPercent = sprintBandwidth > 0 ? Math.round((allocatedHours / sprintBandwidth) * 100) : 0;
+    
+    // Header
+    header.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <div class="profile-card">
+                <div class="profile-avatar" style="background: ${gradient};">${initials}</div>
+                <div class="profile-info">
+                    <h3>${escapeHtml(member.name)}</h3>
+                    <span>${escapeHtml(member.role || 'Team Member')}</span>
+                </div>
+            </div>
+            <button onclick="closeMemberProfile()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="profile-stats-grid">
+            <div class="profile-stat-card">
+                <div class="stat-val">${memberTasks.length}</div>
+                <div class="stat-lbl">Tasks</div>
+            </div>
+            <div class="profile-stat-card">
+                <div class="stat-val">${allocatedHours}h</div>
+                <div class="stat-lbl">Allocated</div>
+            </div>
+            <div class="profile-stat-card">
+                <div class="stat-val">${utilizationPercent}%</div>
+                <div class="stat-lbl">Utilization</div>
+            </div>
+        </div>
+    `;
+    
+    // Body - Colour Legend + Daily Load Heatmap + Task List
+    let bodyHTML = '';
+    
+    // Colour hierarchy legend
+    bodyHTML += `<div class="profile-section">
+        <div class="profile-section-title">Colour Guide</div>
+        <div class="profile-color-legend">
+            <div class="color-legend-item">
+                <span class="color-swatch" style="background: var(--success);"></span>
+                <span>Completed</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch" style="background: var(--primary);"></span>
+                <span>In Progress</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch" style="background: var(--danger);"></span>
+                <span>Blocked</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch" style="background: var(--info);"></span>
+                <span>In Review</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch" style="background: var(--gray-400);"></span>
+                <span>To Do / Pending</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch" style="background: var(--warning);"></span>
+                <span>Delayed</span>
+            </div>
+        </div>
+        <div class="profile-color-legend" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+            <div class="color-legend-item">
+                <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(16,185,129,0.3);background:var(--surface-secondary);"></span>
+                <span>Low load (&lt;80%)</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(245,158,11,0.3);background:var(--surface-secondary);"></span>
+                <span>High load (80-100%)</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(239,68,68,0.3);background:var(--surface-secondary);"></span>
+                <span>Over capacity (&gt;100%)</span>
+            </div>
+        </div>
+    </div>`;
+    
+    // Daily Load Heatmap
+    if (appData.project) {
+        const weeklyHours = member.bandwidthHours ?? 40;
+        const hoursPerDay = weeklyHours / WORK_DAYS_PER_WEEK;
+        
+        // Build daily allocation
+        const dailyAllocation = {};
+        memberTasks.forEach(task => {
+            if (!task.startDate || !task.endDate) return;
+            const taskDays = getWorkingDays(task.startDate, task.endDate);
+            if (taskDays <= 0) return;
+            const hoursPerTaskDay = (task.estimatedHours || 0) / taskDays;
+            const dates = generateDateRange(task.startDate, task.endDate);
+            dates.forEach(d => {
+                if (!isWeekend(d)) {
+                    dailyAllocation[d] = (dailyAllocation[d] || 0) + hoursPerTaskDay;
+                }
+            });
+        });
+        
+        const sprintDates = generateDateRange(appData.project.startDate, appData.project.endDate);
+        const todayStr = getTodayLocalDate();
+        
+        bodyHTML += `<div class="profile-section">
+            <div class="profile-section-title">Daily Load Heatmap</div>
+            <div class="profile-heatmap">
+                ${sprintDates.map(d => {
+                    const date = new Date(d + 'T00:00:00');
+                    const dayNum = date.getDate();
+                    const wkend = isWeekend(d);
+                    const allocated = dailyAllocation[d] || 0;
+                    const ratio = hoursPerDay > 0 ? allocated / hoursPerDay : 0;
+                    const level = wkend ? 0 : ratio === 0 ? 0 : ratio <= 0.4 ? 1 : ratio <= 0.7 ? 2 : ratio <= 1 ? 3 : 4;
+                    const isToday = d === todayStr;
+                    return `<div class="heatmap-day level-${level} ${isToday ? 'is-today' : ''} ${wkend ? 'is-weekend' : ''}" 
+                        title="${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${wkend ? 'Weekend' : `${allocated.toFixed(1)}h / ${hoursPerDay}h`}">${dayNum}</div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }
+    
+    // Next available
+    const avail = getNextAvailableDay(member, 2);
+    if (avail) {
+        const isToday = avail.date === getTodayLocalDate();
+        bodyHTML += `<div class="profile-section">
+            <div class="profile-section-title">Availability</div>
+            <div style="padding:8px 0; font-size:0.85rem; color: var(--text-secondary);">
+                Next available: <strong>${isToday ? 'Today' : formatDate(avail.date)}</strong> with <strong>${avail.freeHours}h</strong> free
+            </div>
+        </div>`;
+    }
+    
+    // Task list
+    bodyHTML += `<div class="profile-section">
+        <div class="profile-section-title">Tasks (${memberTasks.length})</div>
+        ${memberTasks.length === 0 ? '<div style="font-size:0.8rem;color:var(--text-muted);padding:12px 0;">No tasks assigned</div>' :
+        memberTasks.map(task => {
+            const statusInfo = getStatusInfo(task.status, task.completed);
+            const dotColor = task.completed ? 'var(--success)' : 
+                           task.status && task.status.toLowerCase().includes('blocked') ? 'var(--danger)' :
+                           task.status && task.status.toLowerCase().includes('progress') ? 'var(--primary)' : 'var(--gray-400)';
+            return `<div class="profile-task-item" onclick="closeMemberProfile(); showDesktopTaskDetail('${task.id}');">
+                <div class="profile-task-dot" style="background: ${dotColor};"></div>
+                <div class="profile-task-name">${escapeHtml(task.name)}</div>
+                <div class="profile-task-hours">${task.estimatedHours || 0}h</div>
+            </div>`;
+        }).join('')}
+    </div>`;
+    
+    body.innerHTML = bodyHTML;
+    
+    // Show overlay
+    overlay.classList.add('active');
+}
+
+function closeMemberProfile() {
+    const overlay = document.getElementById('member-profile-overlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
+// --- BREADCRUMB (removed) ---
+function updateBreadcrumb() { /* no-op — breadcrumb removed */ }
+
+// --- FAB ---
+function initializeFAB() {
+    const container = document.getElementById('fab-container');
+    const fabMain = document.getElementById('fab-main');
+    if (!container || !fabMain) return;
+    
+    fabMain.addEventListener('click', (e) => {
+        e.stopPropagation();
+        container.classList.toggle('open');
+    });
+    
+    // Handle FAB action buttons via delegation
+    const fabMenu = document.getElementById('fab-menu');
+    if (fabMenu) {
+        fabMenu.addEventListener('click', (e) => {
+            const actionBtn = e.target.closest('.fab-action');
+            if (actionBtn) {
+                const action = actionBtn.dataset.action;
+                if (action) handleFabAction(action);
+            }
+        });
+    }
+    
+    // Close FAB when clicking outside
+    document.addEventListener('click', (e) => {
+        if (container && !container.contains(e.target)) {
+            container.classList.remove('open');
+        }
+    });
+}
+
+function handleFabAction(action) {
+    const container = document.getElementById('fab-container');
+    if (container) container.classList.remove('open');
+    
+    switch (action) {
+        case 'refresh':
+            refreshData();
+            break;
+        case 'activity':
+            toggleActivityLog();
+            break;
+        case 'export':
+            if (typeof exportData === 'function') exportData();
+            break;
+        case 'print':
+            if (typeof window.printReport === 'function') window.printReport();
+            else window.print();
+            break;
+    }
+}
+
+// --- HEAT GLOW ON AVATARS ---
+function applyHeatGlow() {
+    if (!appData.teamMembers || !appData.tasks) return;
+    
+    const teamList = document.getElementById('desktop-team-list');
+    const bandwidthGrid = document.getElementById('desktop-bandwidth-grid');
+    if (!teamList && !bandwidthGrid) return;
+    
+    appData.teamMembers.forEach((member, idx) => {
+        const sprintBandwidth = getSprintBandwidth(member);
+        const memberTasks = appData.tasks.filter(t => t.owner === member.id);
+        const allocated = memberTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+        const ratio = sprintBandwidth > 0 ? allocated / sprintBandwidth : 0;
+        
+        const heatClass = ratio > 1 ? 'heat-red' : ratio > 0.8 ? 'heat-yellow' : 'heat-green';
+        
+        // Apply to team list avatars
+        if (teamList) {
+            const teamAvatars = teamList.querySelectorAll('.team-member-avatar');
+            if (teamAvatars[idx]) {
+                teamAvatars[idx].classList.remove('heat-green', 'heat-yellow', 'heat-red');
+                teamAvatars[idx].classList.add(heatClass);
+            }
+        }
+        
+        // Apply to bandwidth card avatars
+        if (bandwidthGrid) {
+            const bwAvatars = bandwidthGrid.querySelectorAll('.bandwidth-card-avatar');
+            if (bwAvatars[idx]) {
+                bwAvatars[idx].classList.remove('heat-green', 'heat-yellow', 'heat-red');
+                bwAvatars[idx].classList.add(heatClass);
+            }
+        }
+    });
+}
+
+// --- MAKE TEAM MEMBERS CLICKABLE ---
+function wireTeamMemberClicks() {
+    const teamList = document.getElementById('desktop-team-list');
+    if (!teamList || !appData.teamMembers) return;
+    
+    const members = teamList.querySelectorAll('.desktop-team-member');
+    members.forEach((el, idx) => {
+        if (appData.teamMembers[idx]) {
+            el.addEventListener('click', () => {
+                showMemberProfile(appData.teamMembers[idx].id);
+            });
+        }
+    });
+}
+
+// --- MAKE BANDWIDTH CARDS CLICKABLE ---
+function wireBandwidthCardClicks() {
+    const bandwidthGrid = document.getElementById('desktop-bandwidth-grid');
+    if (!bandwidthGrid || !appData.teamMembers) return;
+    
+    const cards = bandwidthGrid.querySelectorAll('.desktop-bandwidth-card');
+    cards.forEach((card, idx) => {
+        if (appData.teamMembers[idx]) {
+            card.style.cursor = 'pointer';
+            card.addEventListener('click', () => {
+                showMemberProfile(appData.teamMembers[idx].id);
+            });
+        }
+    });
+}
+
+// --- COUNT-UP ANIMATION ---
+function animateCountUp(element, target, duration = 600) {
+    if (!element) return;
+    // Respect prefers-reduced-motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        element.textContent = target;
+        return;
+    }
+    
+    const isPercent = String(target).includes('%');
+    const isHours = String(target).includes('h');
+    const suffix = isPercent ? '%' : isHours ? 'h' : '';
+    const numTarget = parseFloat(target);
+    
+    if (isNaN(numTarget)) {
+        element.textContent = target;
+        return;
+    }
+    
+    const startTime = performance.now();
+    
+    function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(numTarget * eased);
+        
+        element.textContent = `${current}${suffix}`;
+        
+        if (progress < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            element.textContent = target;
+            element.classList.add('metric-count-up');
+            setTimeout(() => element.classList.remove('metric-count-up'), 400);
+        }
+    }
+    
+    requestAnimationFrame(tick);
+}
+
+function animateMetrics() {
+    // Animate the main metric values
+    const progressVal = document.getElementById('sprint-progress-value');
+    const utilVal = document.getElementById('team-utilization-value');
+    
+    if (progressVal && progressVal.textContent) {
+        animateCountUp(progressVal, progressVal.textContent);
+    }
+    if (utilVal && utilVal.textContent) {
+        animateCountUp(utilVal, utilVal.textContent);
+    }
+}
+
+// --- CLOSE ALL OVERLAYS ---
+function closeAllOverlays() {
+    const dropdown = document.getElementById('notification-dropdown');
+    const activityPanel = document.getElementById('activity-log-panel');
+    if (dropdown) dropdown.classList.remove('active');
+    if (activityPanel) activityPanel.classList.remove('active');
+}
+
+// --- NOTIFICATION BELL HANDLER ---
+function initializeNotificationBell() {
+    const bellBtn = document.getElementById('notification-bell');
+    if (!bellBtn) return;
+    
+    bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleNotificationDropdown();
+    });
+    
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('notification-dropdown');
+        if (dropdown && dropdown.classList.contains('active') && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+    
+    // Clear button
+    const clearBtn = document.querySelector('.notification-clear-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearNotifications();
+        });
+    }
+}
+
+// --- ACTIVITY LOG CLOSE HANDLER ---
+function initializeActivityLogPanel() {
+    // Close button uses onclick="closeActivityLog()" in HTML — no duplicate listener needed
+    
+    // Restore from session
+    try {
+        const saved = sessionStorage.getItem('fmb-activity-log');
+        if (saved) _activityLog = JSON.parse(saved);
+    } catch(e) {}
+}
+
+// --- AUTO-REFRESH BAR HANDLERS ---
+function initializeAutoRefreshBar() {
+    const updateBtn = document.querySelector('.auto-refresh-btn');
+    const dismissBtn = document.querySelector('.auto-refresh-dismiss');
+    
+    if (updateBtn) updateBtn.addEventListener('click', applyAutoRefresh);
+    if (dismissBtn) dismissBtn.addEventListener('click', dismissAutoRefresh);
+}
+
+// --- MEMBER PROFILE OVERLAY CLOSE ---
+function initializeMemberProfileOverlay() {
+    const overlay = document.getElementById('member-profile-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeMemberProfile();
+        });
+    }
+}
+
+// --- EMPTY STATE SVGs ---
+function renderEmptyState(container, title, subtitle) {
+    if (!container) return;
+    container.innerHTML = `
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+            <p>${escapeHtml(title)}</p>
+            <span>${escapeHtml(subtitle)}</span>
+        </div>
+    `;
+}
+
+// --- WIDGET REORDER (drag & drop) ---
+let _widgetOrder = null;
+
+function initWidgetReorder() {
+    // Restore saved order
+    try {
+        const saved = localStorage.getItem('fmb-widget-order');
+        if (saved) _widgetOrder = JSON.parse(saved);
+    } catch(e) {}
+    
+    if (_widgetOrder) applyWidgetOrder();
+    
+    // Make dashboard cards draggable
+    const dashboard = document.querySelector('.desktop-section[data-section="dashboard"]');
+    if (!dashboard) return;
+    
+    const cards = dashboard.querySelectorAll('.desktop-card');
+    cards.forEach((card, idx) => {
+        card.setAttribute('draggable', 'true');
+        card.dataset.widgetIdx = idx;
+        
+        card.addEventListener('dragstart', (e) => {
+            card.style.opacity = '0.5';
+            e.dataTransfer.setData('text/plain', idx);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        
+        card.addEventListener('dragend', () => {
+            card.style.opacity = '1';
+        });
+        
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            card.style.outline = '2px dashed var(--primary)';
+            card.style.outlineOffset = '4px';
+        });
+        
+        card.addEventListener('dragleave', () => {
+            card.style.outline = '';
+            card.style.outlineOffset = '';
+        });
+        
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.style.outline = '';
+            card.style.outlineOffset = '';
+            
+            const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIdx = parseInt(card.dataset.widgetIdx);
+            
+            if (fromIdx === toIdx) return;
+            
+            const parent = card.parentNode;
+            const allCards = Array.from(parent.querySelectorAll('.desktop-card'));
+            const fromCard = allCards[fromIdx];
+            const toCard = allCards[toIdx];
+            
+            if (fromIdx < toIdx) {
+                parent.insertBefore(fromCard, toCard.nextSibling);
+            } else {
+                parent.insertBefore(fromCard, toCard);
+            }
+            
+            // Save new order
+            saveWidgetOrder();
+            
+            showToast('Widget order saved', 'success', 1500);
+        });
+    });
+}
+
+function saveWidgetOrder() {
+    const dashboard = document.querySelector('.desktop-section[data-section="dashboard"]');
+    if (!dashboard) return;
+    
+    const cards = dashboard.querySelectorAll('.desktop-card');
+    const order = Array.from(cards).map(c => c.id || c.querySelector('h3')?.textContent || '');
+    
+    try {
+        localStorage.setItem('fmb-widget-order', JSON.stringify(order));
+    } catch(e) {}
+}
+
+function applyWidgetOrder() {
+    if (!_widgetOrder) return;
+    
+    const dashboard = document.querySelector('.desktop-section[data-section="dashboard"]');
+    if (!dashboard) return;
+    
+    const cards = Array.from(dashboard.querySelectorAll('.desktop-card'));
+    
+    _widgetOrder.forEach(identifier => {
+        const card = cards.find(c => (c.id === identifier) || (c.querySelector('h3')?.textContent === identifier));
+        if (card) dashboard.appendChild(card);
+    });
+}
+
+// --- ARIA LIVE REGIONS ---
+function announceScreenReader(message) {
+    let region = document.getElementById('sr-announcements');
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'sr-announcements';
+        region.setAttribute('role', 'status');
+        region.setAttribute('aria-live', 'polite');
+        region.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);';
+        document.body.appendChild(region);
+    }
+    region.textContent = message;
+}
+
+// --- MASTER INITIALIZER FOR V3 FEATURES ---
+function initializeV3Features() {
+    if (window.innerWidth < 769) return; // Desktop only
+    
+    // Initialize notification bell
+    initializeNotificationBell();
+    
+    // Initialize activity log panel
+    initializeActivityLogPanel();
+    
+    // Initialize auto-refresh bar handlers
+    initializeAutoRefreshBar();
+    
+    // Initialize member profile overlay
+    initializeMemberProfileOverlay();
+    
+    // Start auto-refresh polling
+    initAutoRefresh();
+    
+    // Take initial data snapshot
+    _previousSnapshot = takeDataSnapshot();
+    
+    // ARIA announcement
+    announceScreenReader('Dashboard loaded with latest sprint data');
+}
+
+// --- POST-RENDER HOOK (called after renderDesktopUI) ---
+function postRenderV3() {
+    if (window.innerWidth < 769) return;
+    
+    // Generate & render notifications
+    generateNotifications();
+    renderNotificationDropdown();
+    
+    // Apply heat glow on avatars
+    applyHeatGlow();
+    
+    // Wire team member click handlers
+    wireTeamMemberClicks();
+    
+    // Animate metrics
+    animateMetrics();
+    
+    // Wire bandwidth card clicks for member profile
+    wireBandwidthCardClicks();
+    
+}
+
+// --- EXPOSE FUNCTIONS GLOBALLY ---
+window.showMemberProfile = showMemberProfile;
+window.closeMemberProfile = closeMemberProfile;
+window.toggleNotificationDropdown = toggleNotificationDropdown;
+window.clearNotifications = clearNotifications;
+window.toggleActivityLog = toggleActivityLog;
+window.closeActivityLog = closeActivityLog;
+window.applyAutoRefresh = applyAutoRefresh;
+window.dismissAutoRefresh = dismissAutoRefresh;
 
