@@ -135,21 +135,21 @@ const SVG_ICONS = Object.freeze({
  * Status Display Configuration
  */
 const STATUS_CONFIG = Object.freeze({
-    'in-progress': { label: 'In Progress', color: '#3b82f6', icon: 'clock' },
-    'todo': { label: 'To Do', color: '#6b7280', icon: 'tasks' },
-    'completed': { label: 'Completed', color: '#10b981', icon: 'check' },
-    'blocked': { label: 'Blocked', color: '#ef4444', icon: 'blocked' },
-    'review': { label: 'In Review', color: '#8b5cf6', icon: 'search' },
-    'pending': { label: 'Pending', color: '#f59e0b', icon: 'clock' }
+    'in-progress': { label: 'On the Hunt', color: '#3a86a8', icon: 'clock' },
+    'todo': { label: 'Awaiting', color: '#8d7660', icon: 'tasks' },
+    'completed': { label: 'Conquered', color: '#2d6a4f', icon: 'check' },
+    'blocked': { label: 'Trapped', color: '#c1440e', icon: 'blocked' },
+    'review': { label: 'Under Watch', color: '#8d6e63', icon: 'search' },
+    'pending': { label: 'Resting', color: '#e6a817', icon: 'clock' }
 });
 
 /**
  * Priority Display Configuration
  */
 const PRIORITY_CONFIG = Object.freeze({
-    'urgent': { label: 'Urgent', color: '#ef4444', weight: 3 },
-    'normal': { label: 'Normal', color: '#3b82f6', weight: 2 },
-    'low': { label: 'Low', color: '#6b7280', weight: 1 }
+    'urgent': { label: 'Critical', color: '#c1440e', weight: 3 },
+    'normal': { label: 'Steady', color: '#3a86a8', weight: 2 },
+    'low': { label: 'Patrol', color: '#8d7660', weight: 1 }
 });
 
 // Export for module systems (if needed)

@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Avi's FindMyBandwidth — Sprint planning, team bandwidth tracking, and task management dashboard">
+    <meta name="description" content="Mowgli's Jungle Dashboard — Hunt planning and wolf pack tracking through the heart of the jungle">
     <meta name="author" content="Avi Gupta">
-    <meta name="theme-color" content="#2563eb">
+    <meta name="theme-color" content="#2d6a4f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FindMyBandwidth">
-    <meta property="og:title" content="Avi's FindMyBandwidth">
-    <meta property="og:description" content="Sprint planning, team bandwidth tracking, and task management dashboard">
+    <meta name="apple-mobile-web-app-title" content="Jungle Dashboard">
+    <meta property="og:title" content="Mowgli's Jungle Dashboard">
+    <meta property="og:description" content="Navigate the jungle of sprints — track your wolf pack, missions, and trails">
     <meta property="og:type" content="website">
-    <title>Avi's FindMyBandwidth — Sprint Dashboard</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Cpath d='M22 55h12l10-30 14 50 10-30h12' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <title>Mowgli's Jungle Dashboard — The Law of the Pack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%231b4332'/%3E%3Cstop offset='50%25' stop-color='%232d6a4f'/%3E%3Cstop offset='100%25' stop-color='%23264653'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Cpath d='M30 70c5-15 10-25 20-35 10 10 15 20 20 35' stroke='%2352b788' fill='none' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M50 35c-3-8-8-12-8-12s3 2 8 0c5 2 8 0 8 0s-5 4-8 12z' fill='%2340916c'/%3E%3Ccircle cx='35' cy='55' r='6' fill='%23e6a817' opacity='0.7'/%3E%3Ccircle cx='65' cy='55' r='6' fill='%23c1440e' opacity='0.6'/%3E%3Ccircle cx='50' cy='48' r='4' fill='%23f4c430' opacity='0.8'/%3E%3Cpath d='M42 72c2-3 5-5 8-5s6 2 8 5' stroke='%233a86a8' fill='none' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -23,71 +26,73 @@
         <aside class="desktop-sidebar" id="desktop-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-brand">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="brand-icon">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    <svg viewBox="0 0 24 24" fill="none" class="brand-icon">
+                        <path d="M12 2C9 2 6 5 6 9c0 5 6 11 6 11s6-6 6-11c0-4-3-7-6-7z" stroke="#52b788" stroke-width="1.5" fill="none"></path>
+                        <path d="M12 6c-1-2-3-3-3-3s1 1 3 0c2 1 3 0 3 0s-2 1-3 3z" fill="#40916c"></path>
+                        <circle cx="12" cy="11" r="2" fill="#f4c430"></circle>
+                        <path d="M4 18c3-1 5 1 8 1s5-2 8-1" stroke="#3a86a8" stroke-width="1.5" stroke-linecap="round" fill="none"></path>
+                        <path d="M4 21c3-1 5 1 8 1s5-2 8-1" stroke="#3a86a8" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.5"></path>
                     </svg>
-                    <span class="brand-text">Avi's FindMyBandwidth</span>
+                    <span class="brand-text">Mowgli's Jungle</span>
                 </div>
             </div>
             
             <nav class="sidebar-nav">
-                <button class="sidebar-nav-item active" data-section="dashboard" aria-label="Dashboard">
+                <button class="sidebar-nav-item active" data-section="dashboard" aria-label="Jungle Camp">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
+                        <path d="M12 2L8 10h8L12 2z"></path>
+                        <path d="M8 10c-3 4-4 8-4 10h16c0-2-1-6-4-10"></path>
+                        <path d="M10 16c.5-2 1-3 2-4 1 1 1.5 2 2 4" stroke-opacity="0.6"></path>
                     </svg>
-                    <span>Dashboard</span>
+                    <span>Jungle Camp</span>
                 </button>
-                <button class="sidebar-nav-item" data-section="tasks" aria-label="Tasks">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 11l3 3L22 4"></path>
-                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                <button class="sidebar-nav-item" data-section="tasks" aria-label="Missions">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <ellipse cx="8" cy="5" rx="2.5" ry="3"></ellipse>
+                        <ellipse cx="16" cy="5" rx="2.5" ry="3"></ellipse>
+                        <ellipse cx="5" cy="12" rx="2" ry="2.5"></ellipse>
+                        <ellipse cx="19" cy="12" rx="2" ry="2.5"></ellipse>
+                        <path d="M8 17c0-2 2-4 4-4s4 2 4 4c0 3-2 5-4 5s-4-2-4-5z"></path>
                     </svg>
-                    <span>Tasks</span>
+                    <span>Missions</span>
                 </button>
-                <button class="sidebar-nav-item" data-section="timeline" aria-label="Timeline">
+                <button class="sidebar-nav-item" data-section="timeline" aria-label="Trail Map">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="4" y1="21" x2="4" y2="14"></line>
-                        <line x1="4" y1="10" x2="4" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12" y2="3"></line>
-                        <line x1="20" y1="21" x2="20" y2="16"></line>
-                        <line x1="20" y1="12" x2="20" y2="3"></line>
-                        <line x1="1" y1="14" x2="7" y2="14"></line>
-                        <line x1="9" y1="8" x2="15" y2="8"></line>
-                        <line x1="17" y1="16" x2="23" y2="16"></line>
+                        <path d="M3 20c3-2 5-6 9-6s6 4 9 6" stroke-linecap="round"></path>
+                        <path d="M3 14c3-2 5-6 9-6s6 4 9 6" stroke-opacity="0.5" stroke-linecap="round"></path>
+                        <circle cx="7" cy="6" r="1.5" fill="currentColor"></circle>
+                        <path d="M5 3l2 3 2-3" stroke-linejoin="round"></path>
+                        <circle cx="17" cy="6" r="1.5" fill="currentColor"></circle>
+                        <path d="M15 3l2 3 2-3" stroke-linejoin="round"></path>
                     </svg>
-                    <span>Timeline</span>
+                    <span>Trail Map</span>
                 </button>
-                <button class="sidebar-nav-item" data-section="bandwidth" aria-label="Capacity">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                <button class="sidebar-nav-item" data-section="bandwidth" aria-label="Pack Strength">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M4 4l3 6v5c0 3 2 6 5 6s5-3 5-6v-5l3-6"></path>
+                        <path d="M7 10c1.5 0 3 1 5 1s3.5-1 5-1"></path>
+                        <circle cx="9" cy="12" r="1" fill="currentColor"></circle>
+                        <circle cx="15" cy="12" r="1" fill="currentColor"></circle>
+                        <path d="M10 16c.8.6 1.5.8 2 .8s1.2-.2 2-.8" stroke-linecap="round"></path>
                     </svg>
-                    <span>Capacity</span>
+                    <span>Pack Strength</span>
                 </button>
-                <button class="sidebar-nav-item" data-section="milestones" aria-label="Milestones">
+                <button class="sidebar-nav-item" data-section="milestones" aria-label="Watering Holes">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
+                        <path d="M12 2c0 0-6 7-6 12a6 6 0 0 0 12 0C18 9 12 2 12 2z"></path>
+                        <path d="M9 16c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5" stroke-linecap="round"></path>
                     </svg>
-                    <span>Milestones</span>
+                    <span>Watering Holes</span>
                 </button>
-                <button class="sidebar-nav-item" data-section="calendar" aria-label="Sprint Calendar">
+                <button class="sidebar-nav-item" data-section="calendar" aria-label="Moon Cycle">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
-                    <span>Calendar</span>
+                    <span>Moon Cycle</span>
                 </button>
             </nav>
             
-            <!-- Dark Mode Toggle -->
+            <!-- Night Jungle Toggle -->
             <button class="sidebar-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="theme-icon-light">
                     <circle cx="12" cy="12" r="5"></circle>
@@ -100,13 +105,13 @@
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                 </svg>
-                <span class="theme-label">Dark Mode</span>
+                <span class="theme-label">Night Jungle</span>
                 <div class="theme-switch"></div>
             </button>
             
             <!-- Quick Links -->
             <div class="sidebar-links">
-                <a href="#" id="sidebar-sheet-link" class="sidebar-link-item" target="_blank" rel="noopener noreferrer" data-sidebar-tooltip="Open Google Sheet">
+                <a href="#" id="sidebar-sheet-link" class="sidebar-link-item" target="_blank" rel="noopener noreferrer" data-sidebar-tooltip="Open the Sacred Scroll">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -114,38 +119,38 @@
                         <line x1="16" y1="17" x2="8" y2="17"></line>
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
-                    <span>View Google Sheet</span>
+                    <span>The Sacred Scroll</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="link-external-icon">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                         <polyline points="15 3 21 3 21 9"></polyline>
                         <line x1="10" y1="14" x2="21" y2="3"></line>
                     </svg>
                 </a>
-                <a href="#" class="sidebar-link-item" onclick="event.preventDefault(); document.querySelector('.desktop-search-input')?.focus();" data-sidebar-tooltip="Quick Search">
+                <a href="#" class="sidebar-link-item" onclick="event.preventDefault(); document.querySelector('.desktop-search-input')?.focus();" data-sidebar-tooltip="Track & Hunt">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <span>Quick Search</span>
+                    <span>Track & Hunt</span>
                     <kbd class="sidebar-kbd">/</kbd>
                 </a>
-                <a href="#" class="sidebar-link-item" onclick="event.preventDefault(); if(typeof openCommandPalette==='function') openCommandPalette();" data-sidebar-tooltip="Command Palette">
+                <a href="#" class="sidebar-link-item" onclick="event.preventDefault(); if(typeof openCommandPalette==='function') openCommandPalette();" data-sidebar-tooltip="Jungle Commands">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="4 17 10 11 4 5"></polyline>
                         <line x1="12" y1="19" x2="20" y2="19"></line>
                     </svg>
-                    <span>Command Palette</span>
+                    <span>Jungle Commands</span>
                     <kbd class="sidebar-kbd">⌘K</kbd>
                 </a>
             </div>
 
             <div class="sidebar-footer">
                 <div class="sidebar-sprint-info">
-                    <span class="sprint-label">Current Sprint</span>
+                    <span class="sprint-label">Current Hunt</span>
                     <span class="sprint-status-badge" id="sidebar-sprint-status">Loading...</span>
                 </div>
                 <div class="sidebar-meta">
-                    <span>Built by Avi ❤️</span>
+                    <span>The Law of the Pack <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;vertical-align:middle;opacity:0.7;"><path d="M4 4l3 6v5c0 3 2 6 5 6s5-3 5-6v-5l3-6"></path><path d="M7 10c1.5 0 3 1 5 1s3.5-1 5-1"></path><circle cx="9" cy="12" r="1" fill="currentColor"></circle><circle cx="15" cy="12" r="1" fill="currentColor"></circle></svg></span>
                     <span class="sidebar-version">v3.1</span>
                 </div>
             </div>
@@ -187,14 +192,14 @@
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" class="desktop-search-input" placeholder="Search tasks, team members, milestones..." id="desktop-search" aria-label="Search">
+                        <input type="text" class="desktop-search-input" placeholder="Track missions, pack members, watering holes..." id="desktop-search" aria-label="Search">
                         <kbd class="search-shortcut">/</kbd>
                     </div>
                 </div>
                 
                 <div class="desktop-header-right">
                     <div class="desktop-quick-stats">
-                        <div class="quick-stat" data-tooltip="Sprint completion based on task count">
+                        <div class="quick-stat" data-tooltip="Hunt completion based on mission count">
                             <!-- <div class="quick-stat-icon qs-progress">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             </div> -->
@@ -202,19 +207,19 @@
                             <span class="quick-stat-label">Progress</span>
                             <!-- <div class="quick-stat-bar"><div class="quick-stat-bar-fill" id="header-progress-bar" style="width: 0%;"></div></div> -->
                         </div>
-                        <div class="quick-stat" data-tooltip="Remaining team capacity in hours">
+                        <div class="quick-stat" data-tooltip="Remaining pack energy in hours">
                             <!-- <div class="quick-stat-icon qs-capacity">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                             </div> -->
                             <span class="quick-stat-value" id="header-capacity">0h</span>
                             <span class="quick-stat-label">Remaining</span>
                         </div>
-                        <div class="quick-stat" data-tooltip="Current sprint day & timeline">
+                        <div class="quick-stat" data-tooltip="Current hunt day & timeline">
                             <!-- <div class="quick-stat-icon qs-sprint">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
                             </div> -->
                             <span class="quick-stat-value" id="sprint-status">Day 0</span>
-                            <span class="quick-stat-label">Sprint</span>
+                            <span class="quick-stat-label">Hunt</span>
                         </div>
                     </div>
                     <div class="desktop-header-actions">
@@ -259,11 +264,11 @@
             <main class="desktop-content" role="main" id="desktop-content">
                 <!-- Dashboard Section -->
                 <section class="desktop-section active" id="desktop-dashboard-section" data-section="dashboard">
-                    <!-- Sprint Overview Card -->
+                    <!-- Hunt Season Overview Card -->
                     <div class="desktop-sprint-card">
                         <div class="sprint-card-content">
                             <div class="sprint-card-main">
-                                <h2 class="sprint-card-title" id="sprint-name">Sprint Overview</h2>
+                                <h2 class="sprint-card-title" id="sprint-name">Hunt Season Overview</h2>
                                 <p class="sprint-card-dates" id="sprint-date-range">Loading...</p>
                                 <div class="sprint-card-quick-stats" id="sprint-quick-stats">
                                     <!-- populated by JS -->
@@ -290,12 +295,13 @@
                         <div class="desktop-metric-card metric-progress">
                             <div class="metric-card-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" opacity="0.3"></polygon>
+                                    <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
                                 </svg>
                             </div>
                             <div class="metric-card-content">
-                                <span class="metric-card-label">Sprint Progress</span>
+                                <span class="metric-card-label">Hunt Progress</span>
                                 <span class="metric-card-value" id="sprint-progress-value">0%</span>
                                 <span class="metric-card-subtitle" id="sprint-progress-subtitle">0 of 0 tasks completed</span>
                             </div>
@@ -304,14 +310,16 @@
                         <div class="desktop-metric-card metric-utilization">
                             <div class="metric-card-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="9" cy="7" r="4"></circle>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    <circle cx="8" cy="5" r="3"></circle>
+                                    <circle cx="16" cy="5" r="3"></circle>
+                                    <path d="M5 9c-1 2-1 4 0 6 1.5 3 4 5 7 5s5.5-2 7-5c1-2 1-4 0-6"></path>
+                                    <circle cx="10" cy="13" r="1" fill="currentColor"></circle>
+                                    <circle cx="14" cy="13" r="1" fill="currentColor"></circle>
+                                    <path d="M10 16.5c.8.5 1.5.7 2 .7s1.2-.2 2-.7" stroke-linecap="round"></path>
                                 </svg>
                             </div>
                             <div class="metric-card-content">
-                                <span class="metric-card-label">Team Utilization</span>
+                                <span class="metric-card-label">Pack Energy</span>
                                 <span class="metric-card-value" id="team-utilization-value">0%</span>
                                 <span class="metric-card-subtitle" id="team-utilization-subtitle">Average capacity used</span>
                             </div>
@@ -320,13 +328,17 @@
                         <div class="desktop-metric-card metric-risk">
                             <div class="metric-card-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    <path d="M3 6l3-3 2 4"></path>
+                                    <path d="M21 6l-3-3-2 4"></path>
+                                    <path d="M5 8c0 4 1 8 7 13 6-5 7-9 7-13"></path>
+                                    <circle cx="9.5" cy="11" r="1" fill="currentColor"></circle>
+                                    <circle cx="14.5" cy="11" r="1" fill="currentColor"></circle>
+                                    <path d="M10 14l2 1.5 2-1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M8 9l1.5 1M16 9l-1.5 1" stroke-linecap="round" stroke-opacity="0.5"></path>
                                 </svg>
                             </div>
                             <div class="metric-card-content">
-                                <span class="metric-card-label">Risk Level</span>
+                                <span class="metric-card-label">Danger Level</span>
                                 <span class="metric-card-value" id="risk-indicator-value">Low</span>
                                 <span class="metric-card-subtitle" id="risk-indicator-subtitle">Based on blockers & delays</span>
                             </div>
@@ -335,31 +347,33 @@
                         <div class="desktop-metric-card metric-velocity">
                             <div class="metric-card-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                    <path d="M2 6c3-1 5 1 7 1s4-2 7-1 4 3 6 3" stroke-linecap="round"></path>
+                                    <path d="M2 12c3-1 5 1 7 1s4-2 7-1 4 3 6 3" stroke-linecap="round" stroke-opacity="0.6"></path>
+                                    <path d="M2 18c3-1 5 1 7 1s4-2 7-1 4 3 6 3" stroke-linecap="round" stroke-opacity="0.3"></path>
                                 </svg>
                             </div>
                             <div class="metric-card-content">
-                                <span class="metric-card-label">Burndown Status</span>
+                                <span class="metric-card-label">Trail Burndown</span>
                                 <div class="burndown-mini" id="burndown-mini">
                                     <div class="burndown-line"></div>
                                     <div class="burndown-ideal"></div>
                                 </div>
-                                <span class="metric-card-subtitle" id="burndown-subtitle">Sprint velocity tracking</span>
+                                <span class="metric-card-subtitle" id="burndown-subtitle">Hunt velocity tracking</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Two Column Layout -->
                     <div class="desktop-two-column">
-                        <!-- Team Overview -->
+                        <!-- Wolf Pack -->
                         <div class="desktop-card">
                             <div class="desktop-card-header">
-                                <h3>Team Overview</h3>
+                                <h3>Wolf Pack</h3>
                                 <div class="card-header-right">
-                                    <span class="card-header-badge" id="team-member-count">0 members</span>
+                                    <span class="card-header-badge" id="team-member-count">0 pack members</span>
                                     <div class="info-tooltip-wrap">
                                         <span class="info-tooltip-trigger">ⓘ</span>
-                                        <div class="info-tooltip-popup">Team members with their tasks, hours, and workload. Shows next available slot for new work.</div>
+                                        <div class="info-tooltip-popup">Pack members with their missions, energy, and workload. Shows next free hunting slot.</div>
                                     </div>
                                 </div>
                             </div>
@@ -373,12 +387,12 @@
                         <!-- Bandwidth Overview -->
                         <div class="desktop-card">
                             <div class="desktop-card-header">
-                                <h3>Bandwidth Overview</h3>
+                                <h3>Territory Overview</h3>
                                 <div class="card-header-right">
                                     <span class="card-header-badge capacity-badge" id="overall-utilization-badge">0%</span>
                                     <div class="info-tooltip-wrap">
                                         <span class="info-tooltip-trigger">ⓘ</span>
-                                        <div class="info-tooltip-popup">Sprint capacity breakdown — total vs allocated vs remaining hours for the team.</div>
+                                        <div class="info-tooltip-popup">Hunt season capacity breakdown — total vs allocated vs remaining energy for the pack.</div>
                                     </div>
                                 </div>
                             </div>
@@ -393,10 +407,10 @@
                     <!-- Status Distribution -->
                     <div class="desktop-card">
                         <div class="desktop-card-header">
-                            <h3>Task Status Distribution</h3>
+                            <h3>Mission Status</h3>
                             <div class="info-tooltip-wrap">
                                 <span class="info-tooltip-trigger">ⓘ</span>
-                                <div class="info-tooltip-popup">Breakdown of all tasks by current status — identify bottlenecks and sprint health at a glance.</div>
+                                <div class="info-tooltip-popup">Breakdown of all missions by status — spot dangers and track the pack’s hunting progress.</div>
                             </div>
                         </div>
                         <div class="desktop-card-content">
@@ -411,11 +425,11 @@
                 <section class="desktop-section" id="desktop-tasks-section" data-section="tasks">
                     <div class="desktop-section-header">
                         <div class="desktop-section-title-group">
-                            <h2>All Tasks</h2>
-                            <span class="desktop-task-count" id="desktop-task-count">0 tasks</span>
+                            <h2>All Missions</h2>
+                            <span class="desktop-task-count" id="desktop-task-count">0 missions</span>
                             <div class="info-tooltip-wrap">
                                 <span class="info-tooltip-trigger">ⓘ</span>
-                                <div class="info-tooltip-popup">All sprint tasks with filtering, sorting, and grid/list views. Click any task for details.</div>
+                                <div class="info-tooltip-popup">All hunt missions with filtering, sorting, and grid/list views. Click any mission for details.</div>
                             </div>
                         </div>
                         <div class="desktop-filters">
@@ -430,25 +444,25 @@
                                 </button>
                             </div>
                             <select class="desktop-filter-select" id="desktop-filter-owner" aria-label="Filter by owner">
-                                <option value="all">All Owners</option>
+                                <option value="all">All Hunters</option>
                             </select>
                             <select class="desktop-filter-select" id="desktop-filter-status" aria-label="Filter by status">
                                 <option value="all">All Statuses</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="todo">To Do</option>
-                                <option value="blocked">Blocked</option>
-                                <option value="review">Review</option>
-                                <option value="completed">Completed</option>
+                                <option value="in-progress">On the Hunt</option>
+                                <option value="todo">Awaiting</option>
+                                <option value="blocked">Trapped</option>
+                                <option value="review">Under Watch</option>
+                                <option value="completed">Conquered</option>
                             </select>
                             <select class="desktop-filter-select" id="desktop-filter-priority" aria-label="Filter by priority">
-                                <option value="all">All Priorities</option>
-                                <option value="urgent">Urgent</option>
-                                <option value="normal">Normal</option>
-                                <option value="low">Low</option>
+                                <option value="all">All Urgency</option>
+                                <option value="urgent">Critical</option>
+                                <option value="normal">Steady</option>
+                                <option value="low">Patrol</option>
                             </select>
                             <label class="desktop-filter-checkbox">
                                 <input type="checkbox" id="desktop-hide-completed">
-                                <span>Hide Completed</span>
+                                <span>Hide Conquered</span>
                             </label>
                         </div>
                     </div>
@@ -466,29 +480,29 @@
                 <section class="desktop-section" id="desktop-timeline-section" data-section="timeline">
                     <div class="desktop-section-header">
                         <div class="desktop-section-title-group">
-                            <h2>Sprint Timeline (Gantt Chart)</h2>
+                            <h2>Trail Map (Jungle Gantt)</h2>
                             <div class="info-tooltip-wrap">
                                 <span class="info-tooltip-trigger">ⓘ</span>
-                                <div class="info-tooltip-popup">Visual timeline showing each task's start to end date. Scroll horizontally for full view.</div>
+                                <div class="info-tooltip-popup">Visual trail showing each mission’s path through the jungle. Scroll to explore the full territory.</div>
                             </div>
                         </div>
                         <div class="desktop-filters gantt-filters">
                             <select class="desktop-filter-select" id="gantt-filter-owner" aria-label="Filter Gantt by owner">
-                                <option value="all">All Owners</option>
+                                <option value="all">All Hunters</option>
                             </select>
                             <select class="desktop-filter-select" id="gantt-filter-status" aria-label="Filter Gantt by status">
                                 <option value="all">All Statuses</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="todo">To Do</option>
-                                <option value="blocked">Blocked</option>
-                                <option value="review">Review</option>
-                                <option value="completed">Completed</option>
+                                <option value="in-progress">On the Hunt</option>
+                                <option value="todo">Awaiting</option>
+                                <option value="blocked">Trapped</option>
+                                <option value="review">Under Watch</option>
+                                <option value="completed">Conquered</option>
                             </select>
                             <select class="desktop-filter-select" id="gantt-filter-priority" aria-label="Filter Gantt by priority">
-                                <option value="all">All Priorities</option>
-                                <option value="urgent">Urgent</option>
-                                <option value="normal">Normal</option>
-                                <option value="low">Low</option>
+                                <option value="all">All Urgency</option>
+                                <option value="urgent">Critical</option>
+                                <option value="normal">Steady</option>
+                                <option value="low">Patrol</option>
                             </select>
                             <button class="gantt-filter-reset-btn" id="gantt-filter-reset" data-tooltip="Reset filters">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 4v6h6"></path><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
@@ -496,7 +510,7 @@
                             </button>
                         </div>
                     </div>
-                    <p class="section-hint-text">Use the filters above to narrow down by owner, status, or priority. Scroll horizontally for full timeline view.</p>
+                    <p class="section-hint-text">Use the filters to narrow your hunt. Scroll horizontally to explore the full trail.</p>
                     <div class="desktop-gantt-wrapper">
                         <div class="gantt-container" role="region" aria-label="Gantt chart timeline" tabindex="0">
                             <div class="gantt-chart">
@@ -512,13 +526,13 @@
                 <!-- Bandwidth Section -->
                 <section class="desktop-section" id="desktop-bandwidth-section" data-section="bandwidth">
                     <div class="desktop-section-header">
-                        <h2>Team Capacity & Bandwidth</h2>
+                        <h2>Pack Strength & Energy</h2>
                         <div class="info-tooltip-wrap">
                             <span class="info-tooltip-trigger">ⓘ</span>
-                            <div class="info-tooltip-popup">Individual capacity per member — allocated vs available hours and next free slot for new tasks.</div>
+                            <div class="info-tooltip-popup">Individual pack member energy — allocated vs available hunting hours and next free slot.</div>
                         </div>
                     </div>
-                    <p class="section-hint-text">Click any member card to view detailed profile, tasks, and availability.</p>
+                    <p class="section-hint-text">Click any pack member to see their detailed profile, missions, and territory map.</p>
                     <div class="desktop-bandwidth-grid" id="desktop-bandwidth-grid">
                         <!-- Dynamic bandwidth cards -->
                     </div>
@@ -527,13 +541,13 @@
                 <!-- Milestones Section -->
                 <section class="desktop-section" id="desktop-milestones-section" data-section="milestones">
                     <div class="desktop-section-header">
-                        <h2>Key Milestones</h2>
+                        <h2>Watering Holes</h2>
                         <div class="info-tooltip-wrap">
                             <span class="info-tooltip-trigger">ⓘ</span>
-                            <div class="info-tooltip-popup">Key milestones and deliverables with progress tracking and due dates.</div>
+                            <div class="info-tooltip-popup">Key watering holes and checkpoints with progress tracking and due dates.</div>
                         </div>
                     </div>
-                    <p class="section-hint-text">Track deliverables and deadlines. Overdue items are highlighted in red. Data sourced from the MILESTONES sheet.</p>
+                    <p class="section-hint-text">Track checkpoints and deadlines. Overdue watering holes are highlighted in danger red. Data sourced from the MILESTONES scroll.</p>
                     <!-- Milestone Summary Stats -->
                     <div class="milestone-summary-grid" id="milestone-summary-grid">
                         <!-- Dynamic summary cards -->
@@ -551,21 +565,21 @@
                     </div>
                 </section>
                 
-                <!-- Sprint Calendar Section -->
+                <!-- Moon Cycle Section -->
                 <section class="desktop-section" id="desktop-calendar-section" data-section="calendar">
                     <div class="desktop-section-header">
-                        <h2>Sprint Calendar</h2>
-                        <span class="section-description">Task distribution across sprint days</span>
+                        <h2>Moon Cycle</h2>
+                        <span class="section-description">Mission distribution across hunt days</span>
                         <div class="info-tooltip-wrap">
                             <span class="info-tooltip-trigger">ⓘ</span>
-                            <div class="info-tooltip-popup">Heatmap showing task load per day. Darker = more tasks. Weekends highlighted.</div>
+                            <div class="info-tooltip-popup">Heatmap showing mission load per day. Darker jungle = more activity. Rest days highlighted.</div>
                         </div>
                     </div>
                     <div class="calendar-split-layout">
-                        <!-- Left: Sprint Calendar -->
+                        <!-- Left: Moon Cycle Calendar -->
                         <div class="desktop-card desktop-calendar-card calendar-split-left">
                             <div class="desktop-card-header">
-                                <h3>Sprint Heatmap</h3>
+                                <h3>Jungle Heatmap</h3>
                             </div>
                             <div class="desktop-card-content">
                                 <div id="desktop-sprint-calendar">
@@ -573,13 +587,13 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Right: Team Availability -->
+                        <!-- Right: Pack Availability -->
                         <div class="desktop-card calendar-split-right">
                             <div class="desktop-card-header">
-                                <h3>Team Availability</h3>
+                                <h3>Pack Availability</h3>
                                 <div class="info-tooltip-wrap">
                                     <span class="info-tooltip-trigger">ⓘ</span>
-                                    <div class="info-tooltip-popup">Team member availability overview for the current sprint period. Shows who is available on which days.</div>
+                                    <div class="info-tooltip-popup">Pack member availability across the hunt season. Shows who can take on new missions each day.</div>
                                 </div>
                             </div>
                             <div class="desktop-card-content">
@@ -608,7 +622,7 @@
     <!-- Notification Dropdown -->
     <div class="notification-dropdown" id="notification-dropdown">
         <div class="notification-dropdown-header">
-            <h4>Notifications</h4>
+            <h4>Jungle Alerts</h4>
             <button class="notification-clear-btn" id="notification-clear-btn" data-tooltip="Clear all">Clear</button>
         </div>
         <div class="notification-list" id="notification-list" role="log" aria-live="polite">
@@ -616,7 +630,7 @@
         </div>
     </div>
 
-    <!-- Member Profile Slide-Over Panel -->
+    <!-- Wolf Profile Slide-Over Panel -->
     <div class="member-profile-overlay" id="member-profile-overlay">
         <div class="member-profile-panel" id="member-profile-panel">
             <div class="member-profile-header" id="member-profile-header">
@@ -634,7 +648,7 @@
     <!-- Activity Log Panel -->
     <div class="activity-log-panel" id="activity-log-panel">
         <div class="activity-log-header">
-            <h4>Activity Log</h4>
+            <h4>Jungle Chronicle</h4>
             <button class="activity-log-close" onclick="closeActivityLog()" aria-label="Close activity log">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -650,7 +664,7 @@
     <div class="auto-refresh-bar" id="auto-refresh-bar" style="display:none;" role="alert">
         <span class="auto-refresh-text">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10"></path></svg>
-            New data available
+            New intelligence from the jungle
         </span>
         <button class="auto-refresh-btn" onclick="applyAutoRefresh()">Update Now</button>
         <button class="auto-refresh-dismiss" onclick="dismissAutoRefresh()" aria-label="Dismiss">&times;</button>
@@ -683,7 +697,7 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" class="command-palette-input" id="command-palette-input" placeholder="Type a command or search tasks, members, actions..." autocomplete="off">
+                <input type="text" class="command-palette-input" id="command-palette-input" placeholder="Speak, Man-Cub... search missions, pack, commands..." autocomplete="off">
             </div>
             <div class="command-palette-results" id="command-palette-results">
                 <!-- Dynamic results -->
@@ -702,7 +716,7 @@
         <header class="header" role="banner">
             <div class="header-content">
                 <div class="header-left">
-                    <h1>Sprint Roadmap</h1>
+                    <h1>Jungle Trail Map</h1>
                     <div class="header-meta">
                         <span id="sprint-status-legacy">Loading...</span>
                         <span id="sprint-dates-legacy">Loading dates...</span>
@@ -764,9 +778,9 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                         </div>
                         <div class="metric-content">
-                            <h3 id="sprint-progress-title-legacy">Sprint Progress</h3>
+                            <h3 id="sprint-progress-title-legacy">Hunt Progress</h3>
                             <div class="metric-value" id="sprint-progress-value-legacy">0%</div>
-                            <div class="metric-subtitle" id="sprint-progress-subtitle-legacy">0 of 0 tasks completed</div>
+                            <div class="metric-subtitle" id="sprint-progress-subtitle-legacy">0 of 0 missions conquered</div>
                         </div>
                     </div>
                     
@@ -775,9 +789,9 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         </div>
                         <div class="metric-content">
-                            <h3 id="team-utilization-title-legacy">Team Utilization</h3>
+                            <h3 id="team-utilization-title-legacy">Pack Energy</h3>
                             <div class="metric-value" id="team-utilization-value-legacy">0%</div>
-                            <div class="metric-subtitle" id="team-utilization-subtitle-legacy">Average capacity used</div>
+                            <div class="metric-subtitle" id="team-utilization-subtitle-legacy">Average energy used</div>
                         </div>
                     </div>
                     
@@ -786,9 +800,9 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                         </div>
                         <div class="metric-content">
-                            <h3 id="risk-indicator-title-legacy">Risk Level</h3>
-                            <div class="metric-value" id="risk-indicator-value-legacy">Low</div>
-                            <div class="metric-subtitle" id="risk-indicator-subtitle-legacy">Based on blockers & delays</div>
+                            <h3 id="risk-indicator-title-legacy">Danger Level</h3>
+                            <div class="metric-value" id="risk-indicator-value-legacy">Patrol</div>
+                            <div class="metric-subtitle" id="risk-indicator-subtitle-legacy">Based on traps & delays</div>
                         </div>
                     </div>
                     
@@ -797,33 +811,33 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                         </div>
                         <div class="metric-content">
-                            <h3 id="burndown-title-legacy">Burndown Status</h3>
+                            <h3 id="burndown-title-legacy">Trail Burndown</h3>
                             <div class="burndown-mini" id="burndown-mini-legacy">
                                 <div class="burndown-line"></div>
                                 <div class="burndown-ideal"></div>
                             </div>
-                            <div class="metric-subtitle" id="burndown-subtitle-legacy">Sprint velocity tracking</div>
+                            <div class="metric-subtitle" id="burndown-subtitle-legacy">Hunt season velocity tracking</div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="status-breakdown" role="region" aria-label="Task status breakdown">
-                    <h3>Task Status Distribution</h3>
+                <div class="status-breakdown" role="region" aria-label="Mission status breakdown">
+                    <h3>Mission Status</h3>
                     <div class="status-bars" id="status-bars-legacy">
                         <!-- Dynamic status bars -->
                     </div>
                 </div>
             </section>
-            <!-- Team Overview Section -->
+            <!-- Wolf Pack Section -->
             <section class="section" aria-labelledby="team-overview-heading">
                 <div class="section-header">
                     <div class="section-icon icon-team" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
-                    <h2 id="team-overview-heading">Team Overview</h2>
+                    <h2 id="team-overview-heading">Wolf Pack</h2>
                 </div>
                 <table role="table" aria-label="Team members overview">
                     <thead>
                         <tr>
-                            <th scope="col">Member</th>
+                            <th scope="col">Wolf</th>
                             <th scope="col">Role</th>
                             <th scope="col">Capacity</th>
                             <th scope="col">Focus</th>
@@ -839,12 +853,12 @@
             <section class="section" aria-labelledby="bandwidth-overview-heading">
                 <div class="section-header">
                     <div class="section-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
-                    <h2 id="bandwidth-overview-heading">Overall Bandwidth Overview</h2>
+                    <h2 id="bandwidth-overview-heading">Territory Energy Overview</h2>
                 </div>
                 <table role="table" aria-label="Bandwidth overview">
                     <thead>
                         <tr>
-                            <th scope="col">Member</th>
+                            <th scope="col">Wolf</th>
                             <th scope="col">Bandwidth Description</th>
                             <th scope="col">Effective Bandwidth</th>
                         </tr>
@@ -861,7 +875,7 @@
             <section class="section" aria-labelledby="gantt-chart-heading">
                 <div class="section-header">
                     <div class="section-icon icon-gantt" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
-                    <h2 id="gantt-chart-heading">Sprint Timeline (Gantt Chart)</h2>
+                    <h2 id="gantt-chart-heading">Trail Map (Jungle Gantt)</h2>
                 </div>
                 <div class="gantt-container" role="region" aria-label="Gantt chart timeline" tabindex="0">
                     <table class="gantt-table" role="table">
@@ -901,8 +915,8 @@
     <!-- Welcome Banner -->
     <div class="welcome-banner mobile-only" id="welcome-banner">
         <div class="banner-content">
-            <span class="banner-text">Welcome to Avi's FindMyBandwidth</span>
-            <span class="banner-emoji">🚀</span>
+            <span class="banner-text">Welcome to Mowgli's Jungle</span>
+            <span class="banner-emoji"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:24px;height:24px;"><path d="M4 4l3 6v5c0 3 2 6 5 6s5-3 5-6v-5l3-6"></path><path d="M7 10c1.5 0 3 1 5 1s3.5-1 5-1"></path><circle cx="9" cy="12" r="1" fill="currentColor"></circle><circle cx="15" cy="12" r="1" fill="currentColor"></circle><path d="M10 16c.8.6 1.5.8 2 .8s1.2-.2 2-.8" stroke-linecap="round"></path></svg></span>
         </div>
     </div>
 
@@ -953,23 +967,23 @@
 
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav mobile-only" id="mobile-nav">
-        <button class="mobile-nav-item active" data-section="dashboard" aria-label="Dashboard" data-tip="Sprint overview & key metrics">
+        <button class="mobile-nav-item active" data-section="dashboard" aria-label="Dashboard" data-tip="Hunt overview & key stats">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
-            <span class="nav-label">Home</span>
+            <span class="nav-label">Camp</span>
         </button>
-        <button class="mobile-nav-item" data-section="tasks" aria-label="Tasks" data-tip="View all sprint tasks & status">
+        <button class="mobile-nav-item" data-section="tasks" aria-label="Tasks" data-tip="View all jungle missions & status">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
-            <span class="nav-label">Tasks</span>
+            <span class="nav-label">Missions</span>
         </button>
-        <button class="mobile-nav-item" data-section="timeline" aria-label="Timeline" data-tip="Visual sprint timeline">
+        <button class="mobile-nav-item" data-section="timeline" aria-label="Timeline" data-tip="Visual jungle trail map">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></span>
-            <span class="nav-label">Timeline</span>
+            <span class="nav-label">Trail</span>
         </button>
-        <button class="mobile-nav-item" data-section="bandwidth" aria-label="Capacity" data-tip="Team workload & capacity">
+        <button class="mobile-nav-item" data-section="bandwidth" aria-label="Capacity" data-tip="Pack energy & strength">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
-            <span class="nav-label">Capacity</span>
+            <span class="nav-label">Pack</span>
         </button>
-        <button class="mobile-nav-item" data-section="milestones" aria-label="Milestones" data-tip="Track sprint milestones">
+        <button class="mobile-nav-item" data-section="milestones" aria-label="Milestones" data-tip="Track watering holes">
             <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
             <span class="nav-label">Goals</span>
         </button>
@@ -1001,7 +1015,7 @@
     <div class="search-overlay mobile-only" id="search-overlay">
         <div class="search-container">
             <div class="search-header">
-                <input type="text" class="mobile-search-input" placeholder="Search tasks, team members, milestones..." aria-label="Search">
+                <input type="text" class="mobile-search-input" placeholder="Track missions, pack members, watering holes..." aria-label="Search">
                 <button class="search-close" aria-label="Close search">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
