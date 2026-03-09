@@ -3002,10 +3002,12 @@ function renderTeamAvailability() {
         return;
     }
     
-    // Build leave lookup per member: { memberId: Set(['2026-02-16', ...]) }
-    const memberLeaves = {};
+    // Build leave / half-day lookup per member
+    const memberLeaves   = {};
+    const memberHalfDays = {};
     appData.teamMembers.forEach(m => {
-        memberLeaves[m.id] = new Set(m.leaves || []);
+        memberLeaves[m.id]   = new Set(m.leaves    || []);
+        memberHalfDays[m.id] = new Set(m.halfDays  || []);
     });
     
     // Build task count per member per day
@@ -3047,13 +3049,15 @@ function renderTeamAvailability() {
                 }).join('')}
             </div>
             ${appData.teamMembers.map(member => {
-                const leaveSet = memberLeaves[member.id];
+                const leaveSet   = memberLeaves[member.id];
+                const halfDaySet = memberHalfDays[member.id];
                 return `<div class="team-avail-row" style="grid-template-columns: ${gridCols};">
                     <div class="team-avail-name" data-tip="${member.name}">${escapeHtml(member.name.split(' ')[0])}</div>
                     ${displayDates.map(d => {
-                        const isPast = d < todayStr;
-                        const isOnLeave = leaveSet.has(d);
-                        const taskCount = (memberLoad[member.id] && memberLoad[member.id][d]) || 0;
+                        const isPast      = d < todayStr;
+                        const isOnLeave   = leaveSet.has(d);
+                        const isHalfDay   = !isOnLeave && halfDaySet.has(d);
+                        const taskCount   = (memberLoad[member.id] && memberLoad[member.id][d]) || 0;
                         
                         let cellClass = '';
                         let label = '';
@@ -3061,8 +3065,12 @@ function renderTeamAvailability() {
                         
                         if (isOnLeave) {
                             cellClass = 'avail-leave';
-                            label = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
+                            label = '🌴';
                             title = `${member.name}: On leave`;
+                        } else if (isHalfDay) {
+                            cellClass = `avail-half-day${taskCount > 0 ? ' avail-half-busy' : ''}`;
+                            label = taskCount > 0 ? `½·${taskCount}` : '½';
+                            title = `${member.name}: Half day${taskCount > 0 ? ` — ${taskCount} task${taskCount !== 1 ? 's' : ''}` : ''}`;
                         } else if (isPast) {
                             cellClass = taskCount > 0 ? 'avail-past-busy' : 'avail-past';
                             label = taskCount > 0 ? String(taskCount) : '-';
@@ -3091,6 +3099,7 @@ function renderTeamAvailability() {
             <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(59, 130, 246, 0.3);"></div> Busy (1-2)</div>
             <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(239, 68, 68, 0.3);"></div> Overloaded (3+)</div>
             <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(245, 158, 11, 0.35);"></div> On Leave</div>
+            <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: linear-gradient(135deg, rgba(245,158,11,0.35) 50%, rgba(16,185,129,0.15) 50%);"></div> Half Day</div>
             <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: var(--gray-200);"></div> Past Day</div>
         </div>
         <p class="team-avail-data-hint">To mark leaves, add a <strong>leaves</strong> column to your MEMBERS sheet with comma-separated dates (e.g. <code>2026-02-16,2026-02-17</code>). For half-days, add a <strong>half_days</strong> column with the same format.</p>
@@ -5782,11 +5791,11 @@ function showMemberProfile(memberId) {
                 <span>Over capacity (&gt;100%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(245,158,11,0.22); border: 2px solid rgba(245,158,11,0.65);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.20); border: 2px solid rgba(239,68,68,0.60);"></span>
                 <span>🌴 Full-day Leave</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: linear-gradient(135deg,rgba(245,158,11,0.28) 50%,var(--surface-secondary) 50%); border: 1px dashed rgba(245,158,11,0.6);"></span>
+                <span class="color-swatch heat-swatch" style="background: linear-gradient(135deg,rgba(239,68,68,0.22) 50%,var(--surface-secondary) 50%); border: 1px dashed rgba(239,68,68,0.55);"></span>
                 <span>½ Half Day</span>
             </div>
         </div>

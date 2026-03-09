@@ -9963,22 +9963,22 @@ tbody tr:last-child td {
 .heatmap-day.is-weekend {
     opacity: 0.3;
 }
-/* Full-day leave — amber/gold, clearly distinct from orange over-capacity */
+/* Full-day leave — solid red, clearly unavailable */
 .heatmap-day.is-leave {
-    background: rgba(245, 158, 11, 0.22) !important;
-    color: #92400e !important;
-    border: 2px solid rgba(245, 158, 11, 0.65);
+    background: rgba(239, 68, 68, 0.20) !important;
+    color: #b91c1c !important;
+    border: 2px solid rgba(239, 68, 68, 0.60) !important;
     font-size: 0.65rem;
 }
-/* Half-day — diagonal gradient: top-left half tinted amber, bottom-right normal */
+/* Half-day — diagonal: red tint top-left (taken), grey bottom-right (free) */
 .heatmap-day.is-half-day {
     background: linear-gradient(
         135deg,
-        rgba(245, 158, 11, 0.28) 50%,
+        rgba(239, 68, 68, 0.22) 50%,
         var(--surface-secondary) 50%
     ) !important;
-    border: 1px dashed rgba(245, 158, 11, 0.6);
-    color: #92400e !important;
+    border: 1px dashed rgba(239, 68, 68, 0.55) !important;
+    color: #b91c1c !important;
 }
 
 /* Profile task list */
@@ -11017,11 +11017,29 @@ tbody tr:last-child td {
     font-size: 0.62rem;
 }
 .team-avail-cell.avail-leave {
-    background: rgba(245, 158, 11, 0.15);
-    color: var(--warning);
+    background: rgba(245, 158, 11, 0.18);
+    color: #92400e;
+    font-size: 0.75rem;
 }
-.team-avail-cell.avail-leave svg {
-    stroke: var(--warning);
+/* Half-day: diagonal split — amber top-left, free-green bottom-right */
+.team-avail-cell.avail-half-day {
+    background: linear-gradient(
+        135deg,
+        rgba(245, 158, 11, 0.30) 50%,
+        rgba(16, 185, 129, 0.15) 50%
+    );
+    color: #92400e;
+    font-size: 0.62rem;
+    font-weight: 700;
+}
+/* Half-day with tasks: swap bottom half to busy-blue */
+.team-avail-cell.avail-half-day.avail-half-busy {
+    background: linear-gradient(
+        135deg,
+        rgba(245, 158, 11, 0.30) 50%,
+        rgba(59, 130, 246, 0.22) 50%
+    );
+    color: #1e40af;
 }
 .team-avail-day-header.past {
     opacity: 0.45;
