@@ -2994,13 +2994,8 @@ function renderTeamAvailability() {
     const sprintDates = generateDateRange(appData.project.startDate, appData.project.endDate);
     const todayStr = getTodayLocalDate();
     
-    // Only show working days (filter out weekends) + limit to ~14 days for readability
-    const workingDates = sprintDates.filter(d => !isWeekend(d));
-    
-    // Find the current/upcoming 2-week window
-    const todayIndex = workingDates.findIndex(d => d >= todayStr);
-    const startIdx = Math.max(0, todayIndex > 0 ? todayIndex - 2 : 0);
-    const displayDates = workingDates.slice(startIdx, startIdx + 12);
+    // Show all sprint working days (full sprint view)
+    const displayDates = sprintDates.filter(d => !isWeekend(d));
     
     if (displayDates.length === 0) {
         container.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--text-muted);">No working days to display</div>';
@@ -3038,7 +3033,7 @@ function renderTeamAvailability() {
     const gridCols = `120px repeat(${colCount}, 1fr)`;
     
     container.innerHTML = `
-        <p class="team-avail-hint">Showing ${displayDates.length} working days around today. Numbers indicate active tasks assigned.</p>
+        <p class="team-avail-hint">Showing all ${displayDates.length} sprint working days. Numbers indicate active tasks assigned.</p>
         <div class="team-avail-grid">
             <div class="team-avail-header-row" style="grid-template-columns: ${gridCols};">
                 <div class="team-avail-day-header">Member</div>
@@ -5771,23 +5766,27 @@ function showMemberProfile(memberId) {
         </div>
         <div class="profile-color-legend" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(59,130,246,0.35); color:#1e40af;"></span>
-                <span>Low load (&lt;80%)</span>
+                <span class="color-swatch heat-swatch" style="background: rgba(20,184,166,0.18);"></span>
+                <span>Low load (&lt;40%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(249,115,22,0.35); color:#c2410c;"></span>
-                <span>High load (80-100%)</span>
+                <span class="color-swatch heat-swatch" style="background: rgba(56,189,248,0.30);"></span>
+                <span>Mid load (40-70%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.4); color:#b91c1c;"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(251,191,36,0.35);"></span>
+                <span>High load (70-100%)</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch heat-swatch" style="background: rgba(249,115,22,0.40);"></span>
                 <span>Over capacity (&gt;100%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.18); border: 2px solid rgba(239,68,68,0.75);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(245,158,11,0.22); border: 2px solid rgba(245,158,11,0.65);"></span>
                 <span>🌴 Full-day Leave</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.08); border: 2px solid rgba(239,68,68,0.38);"></span>
+                <span class="color-swatch heat-swatch" style="background: linear-gradient(135deg,rgba(245,158,11,0.28) 50%,var(--surface-secondary) 50%); border: 1px dashed rgba(245,158,11,0.6);"></span>
                 <span>½ Half Day</span>
             </div>
         </div>
@@ -5905,8 +5904,142 @@ function closeMemberProfile() {
     if (overlay) overlay.classList.remove('active');
 }
 
-// --- BREADCRUMB (removed) ---
-function updateBreadcrumb() { /* no-op — breadcrumb removed */ }
+// =============================================
+// PRINT TASKS LIST
+// =============================================
+function printTasksList() {
+    // Collect currently filtered tasks from the visible table/grid
+    const ownerFilter   = document.getElementById('desktop-filter-owner')?.value   || 'all';
+    const statusFilter  = document.getElementById('desktop-filter-status')?.value  || 'all';
+    const priorityFilter= document.getElementById('desktop-filter-priority')?.value|| 'all';
+    const hideCompleted = document.getElementById('desktop-hide-completed')?.checked || false;
+
+    let tasks = [...(appData.tasks || [])];
+    if (ownerFilter !== 'all')   tasks = tasks.filter(t => t.owner === ownerFilter);
+    if (statusFilter !== 'all')  tasks = tasks.filter(t => normalizeTaskStatus(t.status) === statusFilter);
+    if (priorityFilter !== 'all')tasks = tasks.filter(t => t.priority === priorityFilter);
+    if (hideCompleted)           tasks = tasks.filter(t => !t.completed);
+
+    // Build active filter labels for the header
+    const filterLabels = [];
+    if (ownerFilter !== 'all') {
+        const m = getTeamMember(ownerFilter);
+        filterLabels.push(`Owner: ${m ? m.name : ownerFilter}`);
+    }
+    if (statusFilter !== 'all')   filterLabels.push(`Status: ${statusFilter}`);
+    if (priorityFilter !== 'all') filterLabels.push(`Priority: ${priorityFilter}`);
+    if (hideCompleted)            filterLabels.push('Hiding completed');
+
+    const sprintName = appData.project?.name || 'Sprint';
+    const printDate  = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+    const priorityColors = { urgent: '#dc2626', normal: '#2563eb', low: '#6b7280' };
+    const statusBg = {
+        'completed': '#d1fae5', 'in-progress': '#dbeafe', 'blocked': '#fee2e2',
+        'review': '#cffafe', 'todo': '#f3f4f6', 'pending': '#fef9c3'
+    };
+    const statusFg = {
+        'completed': '#047857', 'in-progress': '#1d4ed8', 'blocked': '#b91c1c',
+        'review': '#0891b2', 'todo': '#374151', 'pending': '#92400e'
+    };
+
+    const rows = tasks.map(task => {
+        const member = getTeamMember(task.owner);
+        const owner  = member ? member.name : (task.owner || 'Unassigned');
+        const status = normalizeTaskStatus(task.status, task.completed ? 'completed' : 'todo');
+        const pColor = priorityColors[task.priority] || '#6b7280';
+        const sBg    = statusBg[status] || '#f3f4f6';
+        const sFg    = statusFg[status] || '#374151';
+        const jiraCell = task.jiraUrl
+            ? `<a href="${task.jiraUrl}" style="color:#2563eb;">${escapeHtml(task.jiraId || 'Link')}</a>`
+            : (task.jiraId ? escapeHtml(task.jiraId) : '-');
+        const notesCell = task.notes ? `<div style="font-size:0.72rem;color:#6b7280;margin-top:2px;">${escapeHtml(task.notes)}</div>` : '';
+        const blockerCell = task.blockers ? `<div style="font-size:0.72rem;color:#dc2626;margin-top:2px;">⚠ ${escapeHtml(task.blockers)}</div>` : '';
+        return `
+            <tr>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;">
+                    <strong style="font-size:0.82rem;">${escapeHtml(task.name)}</strong>
+                    ${notesCell}${blockerCell}
+                </td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:0.8rem;">${escapeHtml(owner)}</td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;">
+                    <span style="background:${sBg};color:${sFg};padding:2px 7px;border-radius:10px;font-size:0.72rem;font-weight:600;white-space:nowrap;">${status.replace('-',' ')}</span>
+                </td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;">
+                    <span style="color:${pColor};font-weight:600;font-size:0.78rem;">${escapeHtml(task.priority || 'normal')}</span>
+                </td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:0.8rem;text-align:right;">${task.estimatedHours || '-'}h</td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:0.78rem;white-space:nowrap;">${task.startDate ? formatDate(task.startDate) : '-'}</td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:0.78rem;white-space:nowrap;">${task.endDate ? formatDate(task.endDate) : '-'}</td>
+                <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:0.75rem;">${jiraCell}</td>
+            </tr>`;
+    }).join('');
+
+    const totalHours = tasks.reduce((s, t) => s + (t.estimatedHours || 0), 0);
+    const completedCount = tasks.filter(t => t.completed).length;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${escapeHtml(sprintName)} — Task List</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: #111827; padding: 24px 32px; }
+  .print-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; border-bottom: 2px solid #2563eb; padding-bottom: 12px; }
+  .print-title { font-size: 1.3rem; font-weight: 700; color: #1e3a8a; }
+  .print-sub   { font-size: 0.78rem; color: #6b7280; margin-top: 3px; }
+  .print-meta  { text-align: right; font-size: 0.75rem; color: #6b7280; line-height: 1.6; }
+  .filters-row { font-size: 0.75rem; color: #374151; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 12px; margin-bottom: 14px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .filters-row b { color: #1f2937; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #f1f5f9; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #475569; padding: 8px 8px; text-align: left; border-bottom: 2px solid #cbd5e1; }
+  thead th:last-child { text-align: left; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  .summary-row { margin-top: 14px; font-size: 0.78rem; color: #374151; border-top: 1px solid #e5e7eb; padding-top: 10px; display: flex; gap: 24px; }
+  .summary-row b { color: #111827; }
+  @media print {
+    body { padding: 12px 18px; }
+    @page { margin: 1.5cm; }
+  }
+</style></head><body>
+  <div class="print-header">
+    <div>
+      <div class="print-title">${escapeHtml(sprintName)} — Task List</div>
+      <div class="print-sub">FindMyBandwidth Sprint Dashboard</div>
+    </div>
+    <div class="print-meta">
+      Printed: ${printDate}<br>
+      ${tasks.length} task${tasks.length !== 1 ? 's' : ''} &nbsp;|&nbsp; ${totalHours}h total
+    </div>
+  </div>
+  ${filterLabels.length ? `<div class="filters-row"><b>Filters:</b> ${filterLabels.join(' &nbsp;·&nbsp; ')}</div>` : ''}
+  <table>
+    <thead><tr>
+      <th style="width:28%">Task</th>
+      <th style="width:12%">Owner</th>
+      <th style="width:11%">Status</th>
+      <th style="width:9%">Priority</th>
+      <th style="width:7%;text-align:right">Hours</th>
+      <th style="width:11%">Start</th>
+      <th style="width:11%">Due</th>
+      <th style="width:11%">Jira</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="summary-row">
+    <span>Total tasks: <b>${tasks.length}</b></span>
+    <span>Completed: <b>${completedCount}</b></span>
+    <span>In progress: <b>${tasks.filter(t=>normalizeTaskStatus(t.status)==='in-progress').length}</b></span>
+    <span>Blocked: <b>${tasks.filter(t=>normalizeTaskStatus(t.status)==='blocked').length}</b></span>
+    <span>Total hours: <b>${totalHours}h</b></span>
+  </div>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=1000,height=700');
+    if (!win) { alert('Pop-up blocked — please allow pop-ups for this page.'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
+}
 
 // --- FAB ---
 function initializeFAB() {
