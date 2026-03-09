@@ -9940,11 +9940,12 @@ tbody tr:last-child td {
     transform: scale(1.15);
     z-index: 1;
 }
+/* Load levels: empty → light blue → mid blue → orange → red */
 .heatmap-day.level-0 { background: var(--surface-secondary); color: var(--text-muted); }
-.heatmap-day.level-1 { background: rgba(16, 185, 129, 0.15); color: #059669; }
-.heatmap-day.level-2 { background: rgba(16, 185, 129, 0.3); color: #047857; }
-.heatmap-day.level-3 { background: rgba(245, 158, 11, 0.3); color: #b45309; }
-.heatmap-day.level-4 { background: rgba(239, 68, 68, 0.3); color: #dc2626; }
+.heatmap-day.level-1 { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
+.heatmap-day.level-2 { background: rgba(59, 130, 246, 0.35); color: #1e40af; }
+.heatmap-day.level-3 { background: rgba(249, 115, 22, 0.35); color: #c2410c; }
+.heatmap-day.level-4 { background: rgba(239, 68, 68, 0.4); color: #b91c1c; }
 .heatmap-day.is-today {
     outline: 2px solid var(--primary);
     outline-offset: 1px;
@@ -9952,18 +9953,18 @@ tbody tr:last-child td {
 .heatmap-day.is-weekend {
     opacity: 0.3;
 }
-/* Full-day leave — amber tint with palm-tree emoji label */
+/* Full-day leave — solid red, clearly unavailable */
 .heatmap-day.is-leave {
-    background: rgba(245, 158, 11, 0.45) !important;
-    color: #92400e !important;
-    border: 2px solid rgba(245, 158, 11, 0.8);
+    background: rgba(239, 68, 68, 0.18) !important;
+    color: #b91c1c !important;
+    border: 2px solid rgba(239, 68, 68, 0.75);
     font-size: 0.65rem;
 }
-/* Half-day — purple/violet dashed border to signal partial availability */
+/* Half-day — lighter rose, same solid border style as leave for visual family */
 .heatmap-day.is-half-day {
-    border: 2px dashed rgba(139, 92, 246, 0.7);
-    background-color: rgba(139, 92, 246, 0.12);
-    color: #6d28d9 !important;
+    background: rgba(239, 68, 68, 0.08);
+    border: 2px solid rgba(239, 68, 68, 0.38);
+    color: #dc2626 !important;
 }
 
 /* Profile task list */

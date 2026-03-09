@@ -5771,23 +5771,23 @@ function showMemberProfile(memberId) {
         </div>
         <div class="profile-color-legend" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(16,185,129,0.3);background:var(--surface-secondary);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(59,130,246,0.35); color:#1e40af;"></span>
                 <span>Low load (&lt;80%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(245,158,11,0.3);background:var(--surface-secondary);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(249,115,22,0.35); color:#c2410c;"></span>
                 <span>High load (80-100%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(239,68,68,0.3);background:var(--surface-secondary);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.4); color:#b91c1c;"></span>
                 <span>Over capacity (&gt;100%)</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(245,158,11,0.45); border: 2px solid rgba(245,158,11,0.8);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.18); border: 2px solid rgba(239,68,68,0.75);"></span>
                 <span>🌴 Full-day Leave</span>
             </div>
             <div class="color-legend-item">
-                <span class="color-swatch heat-swatch" style="background: rgba(139,92,246,0.25); border: 2px dashed rgba(139,92,246,0.7);"></span>
+                <span class="color-swatch heat-swatch" style="background: rgba(239,68,68,0.08); border: 2px solid rgba(239,68,68,0.38);"></span>
                 <span>½ Half Day</span>
             </div>
         </div>
