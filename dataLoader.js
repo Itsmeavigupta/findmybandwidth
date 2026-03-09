@@ -321,6 +321,12 @@ function normalizeMembers(rawData) {
             ? leavesRaw.split(',').map(d => d.trim()).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
             : [];
 
+        // Parse half_days as comma-separated YYYY-MM-DD dates (e.g. "2026-03-10,2026-03-15")
+        const halfDaysRaw = sanitizeText(row.half_days || row['half days'] || row.halfDays || row.HalfDays || row.HALF_DAYS || '');
+        const halfDays = halfDaysRaw
+            ? halfDaysRaw.split(',').map(d => d.trim()).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+            : [];
+
         return {
             id,
             name,
@@ -329,7 +335,8 @@ function normalizeMembers(rawData) {
             capacity: sanitizeText(row.capacity || row.Capacity || '100%'),
             focus: sanitizeText(row.focus || row.Focus || 'Sprint work'),
             bandwidthHours, // EXPLICIT numeric field - no parsing from text
-            leaves // Array of YYYY-MM-DD date strings when member is on leave
+            leaves, // Array of YYYY-MM-DD date strings when member is on full-day leave
+            halfDays // Array of YYYY-MM-DD date strings when member is on half-day leave
         };
     }).filter(member => member.id && member.name && member.id !== 'member-0');
 }

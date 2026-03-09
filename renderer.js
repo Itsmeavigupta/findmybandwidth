@@ -3098,7 +3098,7 @@ function renderTeamAvailability() {
             <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: rgba(245, 158, 11, 0.35);"></div> On Leave</div>
             <div class="team-avail-legend-item"><div class="team-avail-legend-dot" style="background: var(--gray-200);"></div> Past Day</div>
         </div>
-        <p class="team-avail-data-hint">To mark leaves, add a <strong>leaves</strong> column to your MEMBERS sheet with comma-separated dates (e.g. <code>2026-02-16,2026-02-17</code>).</p>
+        <p class="team-avail-data-hint">To mark leaves, add a <strong>leaves</strong> column to your MEMBERS sheet with comma-separated dates (e.g. <code>2026-02-16,2026-02-17</code>). For half-days, add a <strong>half_days</strong> column with the same format.</p>
     `;
 }
 
@@ -5782,6 +5782,14 @@ function showMemberProfile(memberId) {
                 <span class="color-swatch heat-swatch" style="box-shadow: 0 0 0 3px rgba(239,68,68,0.3);background:var(--surface-secondary);"></span>
                 <span>Over capacity (&gt;100%)</span>
             </div>
+            <div class="color-legend-item">
+                <span class="color-swatch heat-swatch" style="background: rgba(245,158,11,0.45); border: 2px solid rgba(245,158,11,0.8);"></span>
+                <span>🌴 Full-day Leave</span>
+            </div>
+            <div class="color-legend-item">
+                <span class="color-swatch heat-swatch" style="background: rgba(139,92,246,0.25); border: 2px dashed rgba(139,92,246,0.7);"></span>
+                <span>½ Half Day</span>
+            </div>
         </div>
     </div>`;
     
@@ -5789,6 +5797,10 @@ function showMemberProfile(memberId) {
     if (appData.project) {
         const weeklyHours = member.bandwidthHours ?? 40;
         const hoursPerDay = weeklyHours / WORK_DAYS_PER_WEEK;
+        
+        // Build leave / half-day lookup sets for quick access
+        const leaveSet = new Set(member.leaves || []);
+        const halfDaySet = new Set(member.halfDays || []);
         
         // Build daily allocation
         const dailyAllocation = {};
@@ -5815,12 +5827,39 @@ function showMemberProfile(memberId) {
                     const date = new Date(d + 'T00:00:00');
                     const dayNum = date.getDate();
                     const wkend = isWeekend(d);
+                    const isLeave = leaveSet.has(d);
+                    const isHalfDay = !isLeave && halfDaySet.has(d);
+                    
+                    // Effective capacity for this day (leave = 0h, half-day = half of normal)
+                    const effectiveCapacity = isLeave ? 0 : isHalfDay ? hoursPerDay / 2 : hoursPerDay;
+                    
                     const allocated = dailyAllocation[d] || 0;
-                    const ratio = hoursPerDay > 0 ? allocated / hoursPerDay : 0;
-                    const level = wkend ? 0 : ratio === 0 ? 0 : ratio <= 0.4 ? 1 : ratio <= 0.7 ? 2 : ratio <= 1 ? 3 : 4;
+                    
+                    let level, extraClass, tipSuffix;
+                    if (wkend) {
+                        level = 0;
+                        extraClass = 'is-weekend';
+                        tipSuffix = 'Weekend';
+                    } else if (isLeave) {
+                        level = 0;
+                        extraClass = 'is-leave';
+                        tipSuffix = `On Leave (0h available)${allocated > 0 ? ` — ⚠️ ${allocated.toFixed(1)}h tasks overlap!` : ''}`;
+                    } else if (isHalfDay) {
+                        const ratio = effectiveCapacity > 0 ? allocated / effectiveCapacity : 0;
+                        level = ratio === 0 ? 0 : ratio <= 0.4 ? 1 : ratio <= 0.7 ? 2 : ratio <= 1 ? 3 : 4;
+                        extraClass = 'is-half-day';
+                        tipSuffix = `Half Day — ${allocated.toFixed(1)}h / ${effectiveCapacity}h`;
+                    } else {
+                        const ratio = hoursPerDay > 0 ? allocated / hoursPerDay : 0;
+                        level = ratio === 0 ? 0 : ratio <= 0.4 ? 1 : ratio <= 0.7 ? 2 : ratio <= 1 ? 3 : 4;
+                        extraClass = '';
+                        tipSuffix = `${allocated.toFixed(1)}h / ${hoursPerDay}h`;
+                    }
+                    
                     const isToday = d === todayStr;
-                    return `<div class="heatmap-day level-${level} ${isToday ? 'is-today' : ''} ${wkend ? 'is-weekend' : ''}" 
-                        data-tip="${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${wkend ? 'Weekend' : `${allocated.toFixed(1)}h / ${hoursPerDay}h`}">${dayNum}</div>`;
+                    const label = isLeave ? '🌴' : isHalfDay ? '½' : dayNum;
+                    return `<div class="heatmap-day level-${level} ${isToday ? 'is-today' : ''} ${extraClass}" 
+                        data-tip="${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${tipSuffix}">${label}</div>`;
                 }).join('')}
             </div>
         </div>`;

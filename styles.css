@@ -9952,6 +9952,19 @@ tbody tr:last-child td {
 .heatmap-day.is-weekend {
     opacity: 0.3;
 }
+/* Full-day leave — amber tint with palm-tree emoji label */
+.heatmap-day.is-leave {
+    background: rgba(245, 158, 11, 0.45) !important;
+    color: #92400e !important;
+    border: 2px solid rgba(245, 158, 11, 0.8);
+    font-size: 0.65rem;
+}
+/* Half-day — purple/violet dashed border to signal partial availability */
+.heatmap-day.is-half-day {
+    border: 2px dashed rgba(139, 92, 246, 0.7);
+    background-color: rgba(139, 92, 246, 0.12);
+    color: #6d28d9 !important;
+}
 
 /* Profile task list */
 .profile-task-item {
